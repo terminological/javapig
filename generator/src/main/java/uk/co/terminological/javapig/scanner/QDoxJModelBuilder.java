@@ -17,8 +17,7 @@ import com.thoughtworks.qdox.model.JavaPackage;
 import com.thoughtworks.qdox.model.JavaType;
 import com.thoughtworks.qdox.model.expression.AnnotationValue;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
-import uk.co.terminological.javapig.annotations.Identifier;
+import java.util.Arrays;
 import uk.co.terminological.javapig.annotations.Model;
 import uk.co.terminological.javapig.annotations.Template;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
@@ -44,14 +43,12 @@ public class QDoxJModelBuilder {
 		libraryBuilder = new SortedClassLibraryBuilder(); 
 		libraryBuilder.appendDefaultClassLoaders();
 		jpb = new JavaProjectBuilder( libraryBuilder );
-		
 		this.model = model;
 	}
 
 	public static JModel scanModel(File... files) {
 		QDoxJModelBuilder out = new QDoxJModelBuilder(new JModel());
 		out.scanSourceModel(files);
-		
 		return out.getModel();
 	}
 
@@ -63,6 +60,9 @@ public class QDoxJModelBuilder {
 		for (File sourceFolder: files) {
 			jpb.addSourceTree(sourceFolder);
 		}
+		for (JavaPackage pkg: jpb.getPackages()) {
+			if (isInModel(pkg)) createPackage(pkg);
+		}
 		jpb.getClasses().stream().map(c->c.getCanonicalName()).forEach(System.out::println);
 		for (JavaClass clazz: jpb.getClasses()) {
 			System.out.println("Inspecting class: "+clazz.getCanonicalName());
@@ -73,9 +73,7 @@ public class QDoxJModelBuilder {
 	public JGetMethod createMethod(JavaMethod m) {
 
 		if (model.methodIsDefined(JNameBuilder.from(m))) return model.findMethod(JNameBuilder.from(m));
-
 		if (
-				m.getModifiers().contains("default") ||
 				!m.getParameters().isEmpty() ||
 				m.getReturnType().equals(JavaType.VOID)
 			) return null;
@@ -90,8 +88,7 @@ public class QDoxJModelBuilder {
 		out.setReturnTypeDefinition(m.getReturnType().getValue());
 		out.setReturnType(JNameBuilder.from(QDoxUtils.box(m.getReturnType(), jpb)));
 		out.setUnderlyingType(JNameBuilder.from(QDoxUtils.underlyingReturnType(m,jpb)));
-		out.setId(QDoxUtils.hasAnnotation(Identifier.class,m));
-
+		out.setDefault(m.isDefault());
 		model.addMethod(out);
 		return out;
 
@@ -109,9 +106,6 @@ public class QDoxJModelBuilder {
 
 		out.setName(cn);
 		for (JavaMethod m: clazz.getMethods(true)) {
-			if (QDoxUtils.hasAnnotation(Identifier.class, m)) {
-				out.setIdentity(JNameBuilder.from(m));
-			}
 			createMethod(m);
 		}
 		for (JavaClass iface: clazz.getInterfaces()) { 
@@ -128,7 +122,6 @@ public class QDoxJModelBuilder {
 
 
 
-	@SuppressWarnings("unchecked")
 	public JPackage createPackage(JavaPackage pkg) {
 
 		if (model.packageIsDefined(pkg.getName())) return model.findPackage(pkg.getName());
@@ -150,6 +143,7 @@ public class QDoxJModelBuilder {
 			tmp.setScope(template.appliesTo());
 			tmp.setTemplateFilename(template.filename());
 			tmp.setExtension(template.extension());
+			tmp.setAdaptor(template.adaptor());
 			out.getMetadata().getTemplates().add(tmp);
 		}
 
@@ -186,7 +180,7 @@ public class QDoxJModelBuilder {
 
 		@Override
 		public Object visit(JavaAnnotation annotation) throws UnsupportedOperationException {
-			return createAnnotation(annotation,new RecursiveVisitor(this.prefix, this.jdb));
+			return createAnnotation(annotation,new RecursiveVisitor(this.context, this.jdb));
 		}
 		
 	};

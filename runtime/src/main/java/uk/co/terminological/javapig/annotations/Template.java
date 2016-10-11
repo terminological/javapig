@@ -21,4 +21,5 @@ public @interface Template {
 	Scope[] appliesTo();
 	String classnameTemplate();
 	String extension() default "java";
+	String adaptor() default "uk.co.terminological.javapig.javamodel.NoOp";
 }

@@ -1,3 +1,4 @@
+<#import "common.ftl" as c>
 <#assign sn>${class.getName().getSimpleName()}</#assign>
 <#assign fqn>${class.getName().getCanonicalName()}</#assign>
 package ${packagename};
@@ -82,4 +83,10 @@ final public class ${classname} implements ${sn}, Cloneable<#if package.getMetad
 	}
 	</#list> 
 	
+	// hashCode and equals
+	// ===================
+	
+	<@c.hashCode class/>
+
+	<@c.equals class classname/>
 }

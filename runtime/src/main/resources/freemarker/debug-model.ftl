@@ -42,8 +42,8 @@ model:
 			<#list class.getSupertypes() as supertypeName>
 <@printClassName supertype!"none" 4/>
 			</#list>
-			<#list class.getMethods() as method>
-			.getMethods() [${class.getName().getCanonicalName()}#${method.getName().getter()}]:
+			<#list class.getExtendedMethods() as method>
+			.getExtendedMethods() / .getMethods() [${class.getName().getCanonicalName()}#${method.getName().getter()}]:
 				.getName():
 <@printMethodName method.getName()!"none" 5/>
 				.getReturnTypeDefinition(): ${method.getReturnTypeDefinition()}
@@ -55,6 +55,7 @@ model:
 				.getInterfaceType(): ${method.getInterfaceType()}
 				.getInterfaceTypeFQN(): ${method.getInterfaceType()} 
 				.getImplementationType(): ${method.getImplementationType()}
+				.isDefault(): ${method.isDefault()?then("true","false")}
 				.isPrimitive(): ${method.isPrimitive()?then("true","false")}
 				.isArray(): ${method.isArray()?then("true","false")}
 				.isParameterised(): ${method.isParameterised()?then("true","false")}

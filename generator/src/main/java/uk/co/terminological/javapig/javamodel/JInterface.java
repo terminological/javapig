@@ -11,7 +11,6 @@ public class JInterface extends JElement {
 
 	private String pkg;
 	private JClassName name;
-	private JMethodName identity;
 	private Set<JClassName> supertypes = new LinkedHashSet<>();
 	
 	public Set<JClassName> supertypeNames() {
@@ -20,7 +19,6 @@ public class JInterface extends JElement {
 	
 	public List<String> getImports(String... additional) {
 		Set<String> tmp = new HashSet<>();
-		//tmp.add(getName().importName());
 		for (JGetMethod method: getMethods()) {
 			for (String imp: method.getImports()) { 
 				if (!imp.startsWith("java.lang")) {
@@ -47,7 +45,8 @@ public class JInterface extends JElement {
 		out.addAll(
 				getModel().getMethods().stream()
 				.filter(m -> 
-					m.getDeclaringClass().equals(this)
+					m.getDeclaringClass().equals(this) &&
+					!m.isDefault()
 					)
 				.collect(Collectors.toList()));
 		out.addAll(
@@ -60,27 +59,24 @@ public class JInterface extends JElement {
 		return out;
 	}
 
-	/*public Set<JGetMethod> getBoundMethods() {
-		return methods;
-	}*/
-
-	/*public String targetFullyQualifiedName(String fqnTemplate) {
-		return fqnTemplate.replace("%class%", this.getName().targetSimpleName()).replace("%package%", this.getName().targetPackageName());
+	public List<JGetMethod> getExtendedMethods() {
+		List<JGetMethod> out = new ArrayList<>();
+		out.addAll(
+				getModel().getMethods().stream()
+				.filter(m -> 
+					m.getDeclaringClass().equals(this)
+					)
+				.collect(Collectors.toList()));
+		out.addAll(
+				this.getSupertypes().stream()
+					.filter(cn -> getModel().interfaceIsDefined(cn))
+					.map(cn -> getModel().findClass(cn))
+					.flatMap(i -> i.getMethods().stream())
+					.collect(Collectors.toList())
+			);
+		return out;
 	}
-
-	public String targetFilePath(String fqnTemplate) {
-		return targetFullyQualifiedName(fqnTemplate).replace(".", "/")+".java";
-	}*/
-
-	public JGetMethod getIdentity() {
-		if (identity == null) return null;
-		return getModel().findMethod(identity);
-	}
-
-	public void setIdentity(JMethodName identity) {
-		this.identity = identity;
-	}
-
+	
 	public Set<JClassName> getSupertypes() {
 		return supertypes;
 	}
@@ -88,10 +84,6 @@ public class JInterface extends JElement {
 	public void setSupertypes(Set<JClassName> supertypes) {
 		this.supertypes = supertypes;
 	}
-
-	/*public JClassName getFullyQualifiedName() {
-		return fullyQualifiedName;
-	}*/
 
 	public void setName(JClassName name) {
 		this.name = name;

@@ -12,6 +12,7 @@ public class JTemplateMetadata  extends JModelComponent {
 	private Scope[] scope;
 	private String classNameTemplate;
 	private String extension;
+	private String adaptor;
 	
 	public String getTemplateFilename() {
 		return templateFilename;
@@ -67,6 +68,17 @@ public class JTemplateMetadata  extends JModelComponent {
 	}
 	public void setExtension(String extension) {
 		this.extension = extension;
+	}
+	@SuppressWarnings("unchecked")
+	public <X> JModelAdaptor<X> getAdaptor(Class<X> input) {
+		try {
+			return (JModelAdaptor<X>) Class.forName(adaptor).newInstance();
+		} catch (InstantiationException | IllegalAccessException | ClassCastException | ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	public void setAdaptor(String adaptor) {
+		this.adaptor = adaptor;
 	}
 	
 }

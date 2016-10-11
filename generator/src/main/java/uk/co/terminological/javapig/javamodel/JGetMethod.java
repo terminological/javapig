@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Arrays;
 
-import javax.annotation.Nullable;
-
 import uk.co.terminological.javapig.annotations.Inverse;
 
 public class JGetMethod extends JElement { 
@@ -18,8 +16,8 @@ public class JGetMethod extends JElement {
 	private JMethodName name;
 	private String returnTypeDefinition;
 	private JClassName returnType;
-	@Nullable private JClassName underlyingType;
-	private boolean isId;
+	private JClassName underlyingType;
+	private boolean isDefault;
 	
 	/*public boolean returnsComplexType() {
 		return getUnderlyingClass() != null;
@@ -56,11 +54,6 @@ public class JGetMethod extends JElement {
 		if (inv ==null) return null;
 		String methodName = inv.value();
 		JMethodName tmp;
-		/*if (isParameterised()) {
-			tmp = JMethodName.from(underlyingType.getCanonicalName()+"#"+methodName);
-		} else {
-			tmp = JMethodName.from(returnType.getCanonicalName()+"#"+methodName);
-		}*/
 		tmp = JMethodName.from(methodName);
 		return getModel().findMethod(tmp);
 	}
@@ -72,7 +65,6 @@ public class JGetMethod extends JElement {
 	public String getInterfaceType() {
 		if (isPrimitive()) return getReturnTypeDefinition(); 
 		if (getUnderlyingType() == null) return getReturnType().getSimpleName();
-		//if (getReturnType().toString().equals(getUnderlyingType().toString())) return getReturnType().getSimpleName();
 		else {
 			return getReturnType().getSimpleName()+"<"+getUnderlyingType().getSimpleName()+">";
 		}
@@ -80,7 +72,6 @@ public class JGetMethod extends JElement {
 	
 	public String getInterfaceTypeFQN() {
 		if (getUnderlyingType() == null) return getReturnType().getCanonicalName();
-		//if (getReturnType().toString().equals(getUnderlyingType().toString())) return getReturnType().getCanonicalName();
 		else {
 			return getReturnType().getSimpleName()+"<"+getUnderlyingType().getCanonicalName()+">";
 		}
@@ -88,7 +79,6 @@ public class JGetMethod extends JElement {
 	
 	public String getImplementationType() {
 		if (getUnderlyingType() == null) return getReturnType().getSimpleName(); 
-		//if (getReturnType().toString().equals(getUnderlyingType().toString())) return getReturnType().getSimpleName();
 		try {
 			Class<?> clazz = Class.forName(getReturnType().toString());
 			if (List.class.isAssignableFrom(clazz)) {
@@ -209,10 +199,6 @@ public class JGetMethod extends JElement {
 		return returnType.typeOf(Optional.class).orElse(Boolean.FALSE);
 	}
 	
-	public boolean isId() {
-		return isId;
-	}
-
 	public boolean hasInverseMethod() {
 		return this.getInverseMethod() != null; //This may be null because the annotation contains things the compiler doesn't yet know about. 
 	}
@@ -241,16 +227,20 @@ public class JGetMethod extends JElement {
 		this.declaringClass = declaringClass;
 	}
 
-	public void setId(boolean isId) {
-		this.isId = isId;
-	}
-
-	public String getReturnTypeDefinition() {
+		public String getReturnTypeDefinition() {
 		return returnTypeDefinition;
 	}
 
 	public void setReturnTypeDefinition(String returnTypeDefinition) {
 		this.returnTypeDefinition = returnTypeDefinition;
+	}
+
+	public boolean isDefault() {
+		return isDefault;
+	}
+
+	public void setDefault(boolean isDefault) {
+		this.isDefault = isDefault;
 	}
 	
 }

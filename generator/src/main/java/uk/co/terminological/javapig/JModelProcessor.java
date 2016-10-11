@@ -29,8 +29,6 @@ import uk.co.terminological.javapig.scanner.AptJModelBuilder;
 @SupportedSourceVersion(RELEASE_8)
 public class JModelProcessor extends AbstractProcessor {
 
-
-
 	private ProcessingEnvironment penv;
 	private Filer filer;
 	private FileObject model;
@@ -39,8 +37,9 @@ public class JModelProcessor extends AbstractProcessor {
 
 	/**
 	 * The processing environment is initialised.
-	 * This involves loading processing runs in previous compilation phases from XML file
-	 * N.b. logging is done to std out as there is no obvious way to make compiler logging visible to the user in any other way.
+	 * This involves loading processing runs in previous compilation phases from file
+	 * N.b. logging is done to System.out as there is no obvious way to make compiler 
+	 * logging visible to the user in any other way.
 	 */
 	@Override
 	public void init(ProcessingEnvironment penv) {
@@ -87,7 +86,7 @@ public class JModelProcessor extends AbstractProcessor {
 	}
 
 	/**
-	 * 
+	 * Uses the AptJModelBuilder
 	 * @see javax.annotation.processing.AbstractProcessor#process(java.util.Set, javax.annotation.processing.RoundEnvironment)
 	 */
 	@Override
@@ -146,28 +145,14 @@ public class JModelProcessor extends AbstractProcessor {
 		// basis using the PackageTemplates, and on a class by class basis
 		// using ClassTemplates. This is done based on the annotations held in 
 		// the @Model(@Template) annotation
-
-		JModelWriter writer = new JModelWriter(filer, modelFile.getParentFile().getParentFile());
-		writer.write(ms.getModel());
+		
+		JModelWriter writer = new JModelWriter();
+		writer.setTargetDirectory(modelFile.getParentFile().getParentFile());
+		writer.setModel(ms.getModel());
+		writer.setFiler(filer);
+		writer.write();
 		return false;
 
 	}
-
-	/*
-	public static ProcessingEnvironment getProcessingEnvironment() {
-		return instance.penv;
-	}
-
-	public static boolean isAssignable(String test, String parent) {
-			TypeElement child = getProcessingEnvironment().getElementUtils().getTypeElement(test);
-			TypeElement par = getProcessingEnvironment().getElementUtils().getTypeElement(parent);
-			return getProcessingEnvironment().getTypeUtils().isAssignable(child.asType(), par.asType()); 	
-	}
-
-	public static boolean isExactType(String test, String parent) {
-		TypeElement child = getProcessingEnvironment().getElementUtils().getTypeElement(test);
-		TypeElement par = getProcessingEnvironment().getElementUtils().getTypeElement(parent);
-		return child.equals(par);
-	}*/
 
 }

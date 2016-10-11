@@ -1,3 +1,4 @@
+<#import "common.ftl" as c>
 <#assign sn>${class.getName().getSimpleName()}</#assign>
 <#assign fqn>${class.getName().getCanonicalName()}</#assign>
 package ${packagename};
@@ -33,15 +34,7 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 	</#list>	
 	) {
 	<#list class.getMethods() as method>
-		<#if method.isList(true)>
-		this.${method.getName().field()} = Collections.unmodifiableList(${method.getName().field()});
-		<#elseif method.isSet(true)>
-		this.${method.getName().field()} = Collections.unmodifiableSet(${method.getName().field()});
-		<#elseif method.isCollection()>
-		this.${method.getName().field()} = new ${method.getImplementationType()}(${method.getName().field()});
-		<#else>
 		this.${method.getName().field()} = ${method.getName().field()};
-		</#if>
 	</#list>
 	}
 	
@@ -146,4 +139,11 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 	}
 		</#if>
 	</#list>
+
+	// hashCode and equals
+	// ===================
+	
+	<@c.hashCode class/>
+
+	<@c.equals class classname/>
 }

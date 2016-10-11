@@ -18,7 +18,6 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import edu.emory.mathcs.backport.java.util.Arrays;
-import uk.co.terminological.javapig.annotations.Identifier;
 import uk.co.terminological.javapig.annotations.Model;
 import uk.co.terminological.javapig.annotations.Template;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
@@ -98,7 +97,6 @@ public class ReflectionJModelBuilder {
 		out.setName(JNameBuilder.from(m));
 		out.setReturnType(JNameBuilder.from(m.getReturnType()));
 		out.setUnderlyingType(JNameBuilder.from(ReflectionUtils.underlyingReturnType(m)));
-		out.setId(m.isAnnotationPresent(Identifier.class));
 
 		model.addMethod(out);
 		return out;
@@ -115,9 +113,6 @@ public class ReflectionJModelBuilder {
 		out.setName(cn);
 
 		for (Method m: clazz.getMethods()) {
-			if (m.isAnnotationPresent(Identifier.class)) {
-				out.setIdentity(JNameBuilder.from(m));
-			}
 			out.getMethods().add(this.createMethod(m));
 		}
 

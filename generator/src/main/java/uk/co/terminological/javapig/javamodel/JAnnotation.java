@@ -61,7 +61,7 @@ public class JAnnotation extends JModelComponent {
                         		.map(ae -> ae.getValues()).orElse(null)
                         				;
                         
-                        if (value == null) {
+                        if (value == null || value.isEmpty()) {
                             return method.getDefaultValue();
                         }
                         

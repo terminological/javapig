@@ -27,6 +27,7 @@ import com.thoughtworks.qdox.model.expression.TypeRef;
 import com.thoughtworks.qdox.model.impl.DefaultJavaType;
 
 import javassist.Modifier;
+import uk.co.terminological.javapig.annotations.BuiltIn;
 
 public class QDoxUtils {
 
@@ -287,32 +288,34 @@ public class QDoxUtils {
 		private List<String> imports = new ArrayList<>();
 		private String packageName;
 		protected JavaProjectBuilder jdb;
-		protected JavaAnnotatedElement prefix;
+		protected JavaAnnotatedElement context;
 
 		//protected JavaClass fieldClass;
 		//protected JavaField field;
 
-		public WorkaroundVisitor(JavaAnnotatedElement prefix, JavaProjectBuilder jdb) {
+		public WorkaroundVisitor(JavaAnnotatedElement context, JavaProjectBuilder jdb) {
 			this.jdb = jdb;
-			this.prefix = prefix;
-			if (prefix instanceof JavaClass) {
-				this.imports = ((JavaClass) prefix).getSource().getImports();
-				this.packageName = ((JavaClass) prefix).getSource().getPackage().getName();				
+			this.context = context;
+			if (context instanceof JavaClass) {
+				this.imports = ((JavaClass) context).getSource().getImports();
+				this.packageName = ((JavaClass) context).getSource().getPackage().getName();				
 			}
-			if (prefix instanceof JavaMethod) {
-				this.imports = ((JavaMethod) prefix).getDeclaringClass().getSource().getImports();
-				this.packageName = ((JavaMethod) prefix).getDeclaringClass().getSource().getPackage().getName();
+			if (context instanceof JavaMethod) {
+				this.imports = ((JavaMethod) context).getDeclaringClass().getSource().getImports();
+				this.packageName = ((JavaMethod) context).getDeclaringClass().getSource().getPackage().getName();
 			}
-			if (prefix instanceof JavaPackage) {
-				//String code = ((JavaPackage) prefix).getJavaClassLibrary().getJavaPackage(((JavaPackage) prefix).getName()).getCodeBlock();
-				this.packageName = ((JavaPackage) prefix).getName();
-				this.imports = jdb.getClasses().stream().map(c -> c.getCanonicalName()).collect(Collectors.toList());
+			if (context instanceof JavaPackage) {
+				this.packageName = ((JavaPackage) context).getName();
+				this.imports = jdb.getSources().stream().flatMap(s -> s.getImports().stream()).collect(Collectors.toList());
+				this.imports.addAll(jdb.getClasses().stream().map(c -> c.getCanonicalName()).collect(Collectors.toList()));
+				this.imports.add(BuiltIn.class.getCanonicalName());
 			}
 
 		}
 
 		public JavaType visit( TypeRef typeRef )
 		{
+		
 			try {
 				String name = typeRef.getType().getValue();
 				if (QDoxUtils.containsClass(typeRef,jdb)) 
@@ -362,52 +365,54 @@ public class QDoxUtils {
 							className = imp.substring(0, imp.lastIndexOf('.'));
 						} 
 					}
-					if (className == null) className =  packageName;
-
+					if (className == null) className = packageName;
+				
+					
 					String fqn = className+"."+fieldRef.getName();
 					String containingClassFQN = fqn.substring(0,fqn.lastIndexOf("."));
 					String fieldName = fqn.substring(fqn.lastIndexOf(".")+1);
 
 					while (!containingClassFQN.isEmpty()) {
 
+						try {
+							Class<?> fieldClazz = Class.forName(containingClassFQN);
+							Field reflectField = fieldClazz.getField(fieldName);
+							if (reflectField.isEnumConstant()) { 
+								return fieldName;
+							} else {
+								if (reflectField.isAccessible() && 
+										Modifier.isStatic(reflectField.getModifiers())) {
+									return reflectField.get(null);
+								} else {
+									throw new RuntimeException("Field must be static and public to be used here"+containingClassFQN+"."+fieldName);
+								}
+							}
+						} catch (ClassNotFoundException | NoSuchFieldException e) {
+							//The class / field is not known by reflection
+						}
+						
 						if (QDoxUtils.containsClass(containingClassFQN,jdb)) {
 
 							JavaClass fieldClass = QDoxUtils.getClass(containingClassFQN, jdb);
 							fieldIndex.set(fieldRef, fieldParts.length - fieldName.split("\\.").length);
-
 							JavaField field = fieldClass.getFieldByName(fieldName);
 
-							if (field == null) {		
-								log.debug("No class by qdox for: "+containingClassFQN);
-								try {
-									Class<?> fieldClazz = Class.forName(containingClassFQN);
-									//field = new DefaultJavaField(fieldClass,fieldName);
-									Field reflectField = fieldClazz.getField(fieldName);
-									if (reflectField.isEnumConstant()) { 
-										return fieldName;
-									} else {
-										if (reflectField.isAccessible() && 
-												Modifier.isStatic(reflectField.getModifiers())) {
-											return reflectField.get(null);
-										}
-										return fieldName;
-									}
-								} catch (ClassNotFoundException e) {
-									log.debug("No class by reflection for: "+containingClassFQN);
-									return fieldName;
-								} catch (NoSuchFieldException e) {
-									throw new RuntimeException(e);
-								}
-							} else {
+							if (field != null) {
 								if (field.isEnumConstant()) {
 									return fieldName;
 								} else {
 									fieldRefField.set(fieldRef, field);
 									return super.visit(fieldRef);
 								}
+							} else {
+								//Qdox doesn't know about this field
+								throw new RuntimeException("The field: "+fieldName+" doesn't exist in the class: "+containingClassFQN);
 							}
+						} else {
+							//QDox doesn't know about this class - it may not yet have been generated
 						}
 
+						//Shorten containingClassFQN and lengthen fieldName ansd try again
 						fieldName = containingClassFQN.substring(containingClassFQN.lastIndexOf(".")+1)+"."+fieldName;
 						if (containingClassFQN.contains(".")) {
 							containingClassFQN = containingClassFQN.substring(0,containingClassFQN.lastIndexOf("."));
@@ -420,29 +425,30 @@ public class QDoxUtils {
 				}
 
 			} catch (NoSuchFieldException| IllegalAccessException ignored) {
+				throw new RuntimeException(ignored);
 			} catch (ClassNotFoundException thrown) {
 				throw new RuntimeException(thrown);
 			}
 
-			String string = fieldRef.getName();
-			if (string.contains(".")) return string.substring(string.lastIndexOf(".")+1);
-			return string;
+			// basically we can't resolve the value of this field. Probably because it has not been
+			// compiled yet. If we knew it was an enum we could return just the name and wait until 
+			// later to map it back, but I don't think we can even figure that out.
+			
+			// there is however a gotcha. Even if we did everything perfectly QDox does not sort out package-info.java level
+			// import statements properly so we may well have missed something that the compiler knows about
+			
+			if (context instanceof JavaPackage) throw new RuntimeException("QDox can't handle package annotations "+
+					"that are enums or constant fields, please try using the annotation processor "+
+					"or simplifying your package level annotations");
+			
+			/*String string = fieldRef.getName();
+			if (string.contains(".")) string = string.substring(string.lastIndexOf(".")+1);
+			if (string.equals(string.toUpperCase())) return string;*/
+			
+			return null;
+			
+			
 		}
-
-		/*protected JavaField resolveField(FieldRef ref, JavaClass javaClass, int start, int end) {
-			String[] fieldParts = ref.getName().split("\\.");
-			JavaField field = null;
-
-			for (int i = start; i < end; ++i) {
-				field = javaClass.getFieldByName(ref.getNamePart(i));
-
-				if (field == null) {
-					break;
-				}
-			}
-
-			return field;
-		}*/
 
 		@Override
 		protected Object getFieldReferenceValue(JavaField javaField) {

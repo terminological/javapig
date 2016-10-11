@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import edu.emory.mathcs.backport.java.util.Collections;
+import java.util.Collections;
 import uk.co.terminological.javapig.javamodel.tools.JModelComponent;
 
 public class JAnnotationValue<T> extends JModelComponent {

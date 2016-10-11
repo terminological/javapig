@@ -23,7 +23,11 @@ public class JMethodName implements Serializable {
 		} else {
 			this.classSimpleName = tmp;
 		}
-		this.name = fqn.split("#")[1];;
+		if (fqn.contains("#")) {
+			this.name = fqn.split("#")[1];
+		} else {
+			throw new RuntimeException("FQN: "+fqn);
+		}
 	}
 	
 

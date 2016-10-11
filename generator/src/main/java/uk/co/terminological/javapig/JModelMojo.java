@@ -1,4 +1,4 @@
-package uk.co.terminological.javapig.maven;
+package uk.co.terminological.javapig;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.artifactId;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.configuration;
@@ -14,9 +14,6 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.version;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-
-import javax.tools.FileObject;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -31,7 +28,6 @@ import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.co.terminological.javapig.JModelWriter;
 import uk.co.terminological.javapig.javamodel.JModel;
 import uk.co.terminological.javapig.scanner.QDoxJModelBuilder;
 
@@ -67,8 +63,10 @@ public class JModelMojo extends AbstractMojo {
 				// generated code will not be identified.
 				System.out.println("First pass - scanning source code");
 				JModel model = QDoxJModelBuilder.scanModel(sourceCodeDirectory, targetDirectory);
-				JModelWriter writer = new JModelWriter(targetDirectory);
-				writer.write(model);
+				JModelWriter writer = new JModelWriter();
+				writer.setTargetDirectory(targetDirectory);
+				writer.setModel(model);
+				writer.write();
 			}
 			
 			executeMojo(plugin(
@@ -94,9 +92,11 @@ public class JModelMojo extends AbstractMojo {
 				// generated code.	
 				System.out.println("Second pass - scanning source code");
 				JModel model = QDoxJModelBuilder.scanModel(sourceCodeDirectory, targetDirectory);
-				JModelWriter writer = new JModelWriter(targetDirectory);
-				writer.write(model);
-						
+				JModelWriter writer = new JModelWriter();
+				writer.setTargetDirectory(targetDirectory);
+				writer.setModel(model);
+				writer.write();
+				
 				File modelFileObject = new File(targetDirectory, "working/model.ser");
 				modelFileObject.getParentFile().mkdirs();
 				ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(modelFileObject));

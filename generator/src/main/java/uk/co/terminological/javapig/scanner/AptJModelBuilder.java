@@ -23,7 +23,6 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
 
-import uk.co.terminological.javapig.annotations.Identifier;
 import uk.co.terminological.javapig.annotations.Model;
 import uk.co.terminological.javapig.annotations.Template;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
@@ -90,6 +89,7 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 				tmp.setScope(template.appliesTo());
 				tmp.setTemplateFilename(template.filename());
 				tmp.setExtension(template.extension());
+				tmp.setAdaptor(template.adaptor());
 				out.getMetadata().getTemplates().add(tmp);
 			}
 			out.getMetadata().getBuiltIn().addAll(Arrays.asList(ann.builtins()));
@@ -138,7 +138,6 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	@Override
 	public Void visitExecutable(ExecutableElement m, Void v) {
 		if (
-				m.getModifiers().contains(Modifier.DEFAULT) ||
 				!m.getParameters().isEmpty() ||
 				m.getReturnType().getKind().equals(TypeKind.VOID)
 			) return DEFAULT_VALUE;
@@ -151,12 +150,8 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 			out.setReturnType(JClassName.from(AptUtils.typeToString(m.getReturnType())));
 			out.setUnderlyingType(JClassName.from(AptUtils.firstParameter(m.getReturnType())));
 			out.setJavaDoc(el.getDocComment(m));
-
 			createAnnotations(m, out);
-			if (m.getAnnotation(Identifier.class) != null) {
-				out.setId(true);
-				out.getDeclaringClass().setIdentity(out.getName());
-			}
+			out.setDefault(m.getModifiers().contains(Modifier.DEFAULT));
 			out.getDeclaringClass().getMethods().add(out);
 			model.addMethod(out);
 			return super.visitExecutable(m, null);
@@ -184,11 +179,6 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	}
 
 
-
-	/*
-	 * This looks at the processor tree hierarchy. However it does not look into parent packages
-	 * as packages are not said to contain each other.
-	 */
 	private boolean isInModel(Element e) {
 		return getModelAnn(e) != null;
 	}
@@ -229,13 +219,11 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 						JNameBuilder.from(pair.getKey()), 
 						JAnnotationValue.of(value)));
 			} catch (CodeGenerationIncompleteException ignored) {
-				// we ignore this as it if to do with references that cannot be resolved
+				// we ignore this as it if to do with references that cannot be resolved at this
+				// stage of compilation
 			}
-				
-			
 		}
 		return out;
-		
 	}
 
 	private static class AnnotationConverter extends SimpleAnnotationValueVisitor8<Object, Void> {

@@ -60,7 +60,7 @@ public abstract class JModelVisitor<OUT> {
 			return visitInterface(
 					tmp,
 					tmp.getAnnotations().stream().flatMap(a -> this.visit(a)),
-					tmp.getMethods().stream().flatMap(a -> this.visit(a))
+					tmp.getExtendedMethods().stream().flatMap(a -> this.visit(a))
 			);
 			
 		} else if (in instanceof JGetMethod) {

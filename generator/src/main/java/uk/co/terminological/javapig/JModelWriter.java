@@ -1,14 +1,12 @@
 package uk.co.terminological.javapig;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.FilerException;
@@ -28,25 +26,49 @@ import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JModel;
 import uk.co.terminological.javapig.javamodel.JPackage;
 import uk.co.terminological.javapig.javamodel.JTemplateMetadata;
-import uk.co.terminological.javapig.javamodel.tools.JModelToString;
 
 public class JModelWriter {
 
 	private Filer filer;
 	private File target;
 	private Configuration cfg;
+	private JModel model;
 
-	public JModelWriter(Filer filer, File targetDirectory) {
+	public JModelWriter() {};
+	
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.javamodel.tools.JModelWriter#setFiler(javax.annotation.processing.Filer)
+	 */
+	public void setFiler(Filer filer) {
 		this.filer = filer;
-		this.target = targetDirectory;
 	}
 
-	public JModelWriter(File targetDirectory) {
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.javamodel.tools.JModelWriter#setTargetDirectory(java.io.File)
+	 */
+	public void setTargetDirectory(File targetDirectory) {
 		this.target = targetDirectory;
 	}
+	
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.javamodel.tools.JModelWriter#setModel(uk.co.terminological.javapig.javamodel.JModel)
+	 */
+	public void setModel(JModel model) {
+		this.model = model;
+	}
 
-	public void write(JModel model) {
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.javamodel.tools.JModelWriter#write()
+	 */
+	public void write() {
+		write(model);
+	}
+	
+	private void write(JModel model) {
 
+		if (target == null) throw new RuntimeException("No target directory has been set");
+		
+		/* see BuiltIn.DEBUG for alternate way of doing this
 		try {
 			PrintWriter pw = new PrintWriter(new FileOutputStream(new File(target,"debug.txt")));
 			pw.print(
@@ -56,15 +78,14 @@ public class JModelWriter {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.out.println("Could not write debug file to: "+target.getAbsolutePath()+"/debug.txt");
-		}
+		}*/
 		
 		cfg = new Configuration(Configuration.VERSION_2_3_25);
 		cfg.setObjectWrapper(new DefaultObjectWrapperBuilder(Configuration.VERSION_2_3_25).build());
 		cfg.setDefaultEncoding("UTF-8");
 		cfg.setTemplateExceptionHandler(TemplateExceptionHandler.DEBUG_HANDLER);
 
-
-		// Use the updated PackagesList model to generate code based on 
+		// Use the updated JModel model to generate code based on 
 		// the freemarker templates. This is done both on a package by package 
 		// basis using the PackageTemplates, and on a class by class basis
 		// using ClassTemplates. This is done based on the annotations held in 
@@ -72,7 +93,7 @@ public class JModelWriter {
 
 		for (JPackage pack: model.getPackages()) {
 
-			for (JTemplateMetadata template: pack.getMetadata().getTemplates()) {
+			for (JTemplateMetadata template: pack.getMetadata().getTemplates()) {				
 				doGenerate(template, model, pack);
 			}
 
@@ -87,22 +108,22 @@ public class JModelWriter {
 	private void doGenerate(JTemplateMetadata template, JModel model, JPackage pkg) {
 		try {
 			cfg.setDirectoryForTemplateLoading(pkg.getMetadata().getDirectory());
+			JModel tmpModel = template.getAdaptor(JModel.class).adapt(model);
 			Template tmp = cfg.getTemplate(template.getTemplateFilename());
-			doGenerate(template.getScope(), template.getClassNameTemplate(), tmp, model, pkg, template.getExtension());
+			doGenerate(template.getScope(), template.getClassNameTemplate(), tmp, tmpModel, pkg, template.getExtension());
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println("failed to load freemarker templates");
+			System.out.println("failed to load freemarker template: "+template.getTemplateFilename());
 		}
 	}
 
 	private void doGenerate(BuiltIn template, JModel model, JPackage pkg) {
 		try {
 			cfg.setClassForTemplateLoading(BuiltIn.class, "/freemarker");
+			JModel tmpModel = template.getAdaptor(JModel.class).adapt(model);
 			Template tmp = cfg.getTemplate(template.getFilename());
-			doGenerate(template.getScope(), template.getClassnameTemplate(), tmp, model, pkg, template.getExtension());
+			doGenerate(template.getScope(), template.getClassnameTemplate(), tmp, tmpModel, pkg, template.getExtension());
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println("failed to load freemarker templates");
+			System.out.println("failed to load freemarker template: "+template.getFilename());
 		}
 	}
 
@@ -212,7 +233,7 @@ public class JModelWriter {
 		}
 	}
 
-	public File targetFilePath(File directory, String fqn, String extension) {
+	private File targetFilePath(File directory, String fqn, String extension) {
 		File out = new File(directory,fqn.replace(".", "/")+"."+extension);
 		out.getParentFile().mkdirs();
 		return out;
