@@ -308,6 +308,12 @@ public class JGetMethod extends JElement implements JTemplateInput  {
 		this.returnType = returnType;
 	}
 
+	/**
+	 * If this method returns a paramerterised type (e.g. a list) this returns the underlying type of that list. 
+	 * If it is not parameterised this will return null
+	 * 
+	 * @return a type as a JClassName
+	 */
 	public JClassName getUnderlyingType() {
 		return underlyingType;
 	}
@@ -353,6 +359,12 @@ public class JGetMethod extends JElement implements JTemplateInput  {
 	@Override
 	public JPackageMetadata getMetadata() {
 		return this.getDeclaringClass().getMetadata();
+	}
+	
+	public String cardinality() {
+		if (this.isCollection()) return "0..*";
+		if (this.isOptional()) return "0..1";
+		else return "1..1";
 	}
 	
 }

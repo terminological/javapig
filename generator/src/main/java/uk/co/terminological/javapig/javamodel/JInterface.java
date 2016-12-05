@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.persistence.Id;
-
 /**
  * The interface describes the basic class structure of the overall model. It provides functions to access the methods of the model
  * and several other utility functions for generating code templates. <br>

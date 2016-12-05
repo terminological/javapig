@@ -5,11 +5,10 @@ import java.util.Optional;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 
-import uk.co.terminological.javapig.csvloader.Csv;
-import uk.co.terminological.javapig.csvloader.Type;
-import uk.co.terminological.javapig.index.Secondary;
 import uk.co.terminological.javapig.annotations.Inverse;
 import uk.co.terminological.javapig.csvloader.ByField;
+import uk.co.terminological.javapig.csvloader.Csv;
+import uk.co.terminological.javapig.csvloader.Type;
 
 @Csv(Type.WIN_CSV)
 public interface ReadV2Key {

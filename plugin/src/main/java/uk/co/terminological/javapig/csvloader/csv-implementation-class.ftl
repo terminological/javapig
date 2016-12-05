@@ -4,15 +4,9 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-import uk.co.terminological.javapig.StringCaster;
 import ${rootPackage}.Indexes;
 <#list class.getImports() as import>
 import ${import};
-</#list>
-<#list class.getMethods() as method>
-	<#if !method.isCollection() && method.isInModel()>
-import ${method.getReturnType().getCanonicalName()}Csv;
-	</#if>
 </#list>
 
 @Generated({"uk.co.terminological.javapig.JModelWriter"})

@@ -1,7 +1,6 @@
 package uk.co.terminological.javapig.javamodel;
 
 import java.util.Collection;
-import java.util.Set;
 
 /**
  * The JModel holds the structure of the basic domain model and provides that

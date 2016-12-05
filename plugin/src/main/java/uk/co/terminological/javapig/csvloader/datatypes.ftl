@@ -18,7 +18,7 @@
 	<#elseif type=="byte">(${s} == null || ${s}.isEmpty()) ? 0 : ${s}.charAt(0)
 	<#elseif type=="java.util.UUID">(${s} == null || ${s}.isEmpty()) ? null : UUID.fromString(${s})
 	<#elseif type=="java.util.URI">(${s} == null || ${s}.isEmpty()) ? null : URI.create(${s})
-	<#else>StringCaster.get(${s}).cast(${type}.class)
+	<#else>uk.co.terminological.javapig.StringCaster.get(${s}).cast(${type}.class)
 	</#if>
 </@compress></#macro>
 

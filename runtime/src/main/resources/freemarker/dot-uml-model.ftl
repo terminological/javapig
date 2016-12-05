@@ -32,7 +32,7 @@ ${class.getName().code()} -> ${super.code()} [arrowtail=onormal, color=grey, len
 </#list>
 <#list model.getMethods() as method>
 	<#if method.isInModel()>
-${method.getName().code()} [label=${method.getName().getter()}, shape=plaintext, fontsize=16]
+${method.getName().code()} [label="${method.getName().getter()} ${method.cardinality()}", shape=plaintext, fontsize=16]
 ${method.getDeclaringClass().getName().code()} -> ${method.getName().code()} [arrowhead=none, color=blue, len=0]
 		<#if method.isParameterised()>
 ${method.getName().code()} -> ${method.getUnderlyingType().code()} [arrowhead=normal, color=blue, len=2]
