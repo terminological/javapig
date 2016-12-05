@@ -4,12 +4,24 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Optional;
 
-public class JClassName implements Serializable {
+/**
+ * The class name is a holder for identifying information about a class or type.
+ * It does not contain information about generics which are out of scope of javapig.
+ * @author terminological
+ *
+ */
+public class JClassName implements Serializable, JName {
 
-	String fullyQualifiedName;
-	String packageName;
+	//String fullyQualifiedName;
+	String packageNameOrNull;
 	String className;
 	
+	/**
+	 * Create a class name from a fully qualified name
+	 * 
+	 * @param s
+	 * @return the class name
+	 */
 	public static JClassName from(String s) {
 		if (null == s || s.isEmpty()) return null;
 		return new JClassName(s);
@@ -17,51 +29,109 @@ public class JClassName implements Serializable {
 	
 	private JClassName() {}
 	
+	/*
+	 * Strips generics if present.
+	 * Splits in first capital letter.
+	 * If no default package name it is assumed to be java.lang
+	 * This is needed at java.lang.String for example is often not fully qualified
+	 * Leaves array brackets (? should it)
+	 */
 	private JClassName(String s) {
 		if (s.contains("<")) s = s.substring(0,s.indexOf("<"));
 		
 		String tmp = s.replaceFirst("\\.([A-Z])", "!$1");
 		if (tmp.contains("!")) {
-			this.fullyQualifiedName = s;
-			packageName = tmp.split("!")[0];
+			//this.fullyQualifiedName = s;
+			packageNameOrNull = tmp.split("!")[0];
 			className = tmp.split("!")[1];
 		} else {
-			packageName = "java.lang";
+			packageNameOrNull = null;
 			className = tmp;
-			this.fullyQualifiedName = packageName+"."+className;
+			//this.fullyQualifiedName = null;
 		}
 	}
 	
+	/**
+	 * Get the package name for this class <br> <br>
+	 * e.g. is the FQN is "org.example.test.Class.SubClass" <br>
+	 * then the simple name is "Class.Subclass". If this is a primitive the 
+	 * package is returned as "java.lang"
+	 * @return The FQN of this class's package as a String
+	 */
 	public String getPackageName() {
-		return packageName;
+		return packageNameOrNull == null ? "java.lang" : packageNameOrNull;
 	}
 	
+	/**
+	 * The simple name is the class name you use to refer to a type  <br>
+	 * This assumes the model is using standard Java conventions with a classname in CamelCase with 
+	 * first letter capital <br> <br>
+	 * e.g. is the FQN is "org.example.test.Class.SubClass" <br>
+	 * then the simple name is "Class.Subclass"
+	 * 
+	 * If this represents a primitive type then it will be the "int" part of the name, or int[] in the case
+	 * of an array
+	 * 
+	 * @return String
+	 */
 	public String getSimpleName() {
 		return className;
 	}
 	
-	public String toString() {return fullyQualifiedName;}
+	public String toString() {return getCanonicalName();}
 	
-	public String getCanonicalName() {return fullyQualifiedName;}
+	/**
+	 * The canonical name of the class  <br> <br>
+	 * e.g. is the FQN is "org.example.test.Class.SubClass"  <br>
+	 * then the canonical name is "org.example.test.Class.SubClass"
+	 *
+	 * if this represents a primitive type then it will be the fqn of the boxed class. e.g. java.lang.Integer[]
+	 
+	 * 
+	 * @return
+	 */
+	public String getCanonicalName() {return box();}
 	
+	/**
+	 * The part of the name used for import statements <br>
+	 * e.g. is the FQN is "org.example.test.Class.SubClass" <br>
+	 * then the import name is "org.example.test.Class" <br>
+	 * 	 
+	 * If this represents a primitive type then it will be the fqn of the boxed class. e.g. java.lang.Integer
+	 * 
+	 * @return the component of the name for an import statement as a String
+	 */
 	public String importName() {
-		return packageName+"."+(className.contains(".") ?
-				className.substring(0,className.indexOf("."))
-					: className.replace("[]", ""));
+		if (className.contains(".")) {
+			return getPackageName()+"."+className.substring(0,className.indexOf("."));
+		} else {
+			return getCanonicalName().replace("[]", "");
+		}
 	}
 
+	
+	/**
+	 * Determines if a class name is exactly equal to another class (as a String) <br>
+	 * @param fqn - the String of the fqn (including [] for arrays)
+	 * @return true if fqn is the same as the class name
+	 */
 	public boolean equivalent(String fqn) {
-		return fullyQualifiedName.equals(fqn);
+		return getCanonicalName().equals(box(fqn));
 	}
 	
-	public boolean equivalent(Class<?> clazz) {
-		return fullyQualifiedName.equals(clazz.getCanonicalName());
-	}
-	
+	/**
+	 * During code creation some classes are compiled already - typically those that are
+	 * imported from another package. 
+	 * @return true if the code is already known to the ClassLoader
+	 */
 	public boolean isCompiled() {
 		return convert().isPresent();
 	}
 	
+	/*
+	 * internal function check for type equivalence assuming compiled classes only
+	 * This is used by JInterface
+	 */
 	protected Optional<Boolean> typeOf(String fqn) {
 		try {
 			return typeOf(Class.forName(fqn));
@@ -70,6 +140,10 @@ public class JClassName implements Serializable {
 		}
 	}
 	
+	/*
+	 * internal function check for type equivalence assuming compiled classes only
+	 * This is used by JInterface
+	 */
 	protected Optional<Boolean> typeOf(Class<?> clazz) {
 		if (convert().isPresent())
 			return Optional.of(clazz.isAssignableFrom(convert().get()));
@@ -77,17 +151,13 @@ public class JClassName implements Serializable {
 			return Optional.empty();
 	}
 
-	/*protected Class<?> convert() throws ClassNotFoundException {
-		Class<?> tmp = Class.forName(importName());
-		if (isArray()) return Array.newInstance(tmp, 0).getClass();
-		return tmp;
-	}*/
-	
+	/*
+	 * internal function get a Class<?> for a JClassName is it is compiled
+	 */
 	protected Optional<Class<?>> convert() {
 		Class<?> tmp;
 		try {
 			tmp = Class.forName(importName());
-		
 		if (isArray()) return Optional.of(Array.newInstance(tmp, 0).getClass());
 		return Optional.of(tmp);
 		} catch (ClassNotFoundException e) {
@@ -95,16 +165,20 @@ public class JClassName implements Serializable {
 		}
 	}
 	
+	/**
+	 * Array classes are denoted by trailing square brackets
+	 * 
+	 * e.g. org.example.SomeClass[]
+	 * @return true if this is an Array class
+	 */
 	public boolean isArray() {
-		return fullyQualifiedName.endsWith("[]");
+		return className.endsWith("[]");
 	}
+	
 	
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((fullyQualifiedName == null) ? 0 : fullyQualifiedName.hashCode());
-		return result;
+		return getCanonicalName().hashCode();
 	}
 
 	@Override
@@ -118,18 +192,48 @@ public class JClassName implements Serializable {
 		if (!(obj instanceof JClassName)) {
 			return false;
 		}
-		JClassName other = (JClassName) obj;
-		if (fullyQualifiedName == null) {
-			if (other.fullyQualifiedName != null) {
-				return false;
-			}
-		} else if (!fullyQualifiedName.equals(other.fullyQualifiedName)) {
-			return false;
-		}
-		return true;
+		return this.getCanonicalName().equals(((JClassName) obj).getCanonicalName());
 	}
 
+	/**
+	 * This returns an alphanumeric code that is unique for this class name and consists only of letters & numbers
+	 * @return e.g. IDM123122223
+	 */
 	public String code() {
 		return ("ID"+this.hashCode()).replace("-", "M");
+	}
+
+	@Override
+	public String getClassName() {
+		return getCanonicalName();
+	}
+	
+	public String box() {
+		return box(packageNameOrNull == null ? className :packageNameOrNull+"."+className);
+	}
+	
+	public static String box(String className) {
+		String value = className.replace("[]", "");
+		if ("void".equals(value) || "Void".equals(value)) 
+			value = Void.class.getCanonicalName();
+		if ("boolean".equals(value) || "Boolean".equals(value)) 
+			value = Boolean.class.getCanonicalName();
+		if ("byte".equals(value) || "Byte".equals(value)) 
+			value = Byte.class.getCanonicalName();
+		if ("char".equals(value) || "Char".equals(value)) 
+			value = Character.class.getCanonicalName();
+		if ("short".equals(value) || "Short".equals(value))
+			value = Short.class.getCanonicalName();
+		if ("int".equals(value) || "Integer".equals(value)) 
+			value = Integer.class.getCanonicalName();
+		if ("long".equals(value) || "Long".equals(value)) 
+			value = Long.class.getCanonicalName();
+		if ("float".equals(value) || "Float".equals(value)) 
+			value = Float.class.getCanonicalName();
+		if ("double".equals(value) || "Double".equals(value)) 
+			value = Double.class.getCanonicalName();
+		if ("String".equals(value)) 
+			value = String.class.getCanonicalName();
+		return value + (className.endsWith("[]") ? "[]" : "");
 	}
 }

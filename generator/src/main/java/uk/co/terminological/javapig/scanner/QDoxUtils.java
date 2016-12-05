@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Vector;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -26,12 +27,15 @@ import com.thoughtworks.qdox.model.expression.FieldRef;
 import com.thoughtworks.qdox.model.expression.TypeRef;
 import com.thoughtworks.qdox.model.impl.DefaultJavaType;
 
+import java.util.Arrays;
 import javassist.Modifier;
 import uk.co.terminological.javapig.annotations.BuiltIn;
+import uk.co.terminological.javapig.annotations.Scope;
 
 public class QDoxUtils {
 
 	static Logger log = LoggerFactory.getLogger(QDoxUtils.class); 
+	static Scope ensureImported = Scope.INTERFACE;
 
 	public static boolean returnsSingleton(JavaMethod m) {
 		return !isCollectionType(m.getReturns());
@@ -384,7 +388,7 @@ public class QDoxUtils {
 										Modifier.isStatic(reflectField.getModifiers())) {
 									return reflectField.get(null);
 								} else {
-									throw new RuntimeException("Field must be static and public to be used here"+containingClassFQN+"."+fieldName);
+									throw new RuntimeException("Field must be static and public to be used here "+containingClassFQN+"."+fieldName);
 								}
 							}
 						} catch (ClassNotFoundException | NoSuchFieldException e) {
@@ -420,10 +424,53 @@ public class QDoxUtils {
 							break;
 						}
 					}
-
-
 				}
 
+				
+				if (context instanceof JavaPackage) {
+					try {
+						
+						//This is a horrible hack from StackOverflow
+						Field f = ClassLoader.class.getDeclaredField("classes");
+						f.setAccessible(true);
+						ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+						@SuppressWarnings("unchecked")
+						Vector<Class<?>> tmp =  (Vector<Class<?>>) f.get(classLoader);
+						ArrayList<Class<?>> classes = new ArrayList<>(tmp); 
+						
+						//classes.stream().forEach(System.out::println);
+						
+						String cls = fieldRef.getName().split("\\.")[0];
+						String fld = fieldRef.getName().split("\\.")[1];
+						
+						//System.out.println(cls);
+						
+						List<Class<?>> matches = classes.stream()
+							.filter(c -> c.getCanonicalName() != null && c.getCanonicalName().endsWith(cls))
+							.collect(Collectors.toList());
+						
+						Field match = matches.stream()
+								.flatMap(c -> Arrays.asList(c.getFields()).stream())
+								.filter(fd -> fd.getName().equals(fld))
+								.findFirst()
+								.orElseThrow(() -> new Exception());
+						
+						if (match.isEnumConstant()) {
+							return fld;
+						} else {
+							fieldRefField.set(fieldRef, match);
+							return super.visit(fieldRef);
+						}
+						
+					} catch (Exception e) {
+						throw new RuntimeException("QDox can't handle package annotations "+
+						"that are enums or constant fields, please try using the annotation processor "+
+						"or simplifying your package level annotations", e);
+					}
+				} else {
+					return null;
+				}
+				
 			} catch (NoSuchFieldException| IllegalAccessException ignored) {
 				throw new RuntimeException(ignored);
 			} catch (ClassNotFoundException thrown) {
@@ -437,15 +484,14 @@ public class QDoxUtils {
 			// there is however a gotcha. Even if we did everything perfectly QDox does not sort out package-info.java level
 			// import statements properly so we may well have missed something that the compiler knows about
 			
-			if (context instanceof JavaPackage) throw new RuntimeException("QDox can't handle package annotations "+
+			
+			/*throw new RuntimeException("QDox can't handle package annotations "+
 					"that are enums or constant fields, please try using the annotation processor "+
-					"or simplifying your package level annotations");
+					"or simplifying your package level annotations");*/
 			
 			/*String string = fieldRef.getName();
 			if (string.contains(".")) string = string.substring(string.lastIndexOf(".")+1);
 			if (string.equals(string.toUpperCase())) return string;*/
-			
-			return null;
 			
 			
 		}

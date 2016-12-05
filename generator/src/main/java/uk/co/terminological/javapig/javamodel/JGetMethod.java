@@ -6,11 +6,38 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Arrays;
 
 import uk.co.terminological.javapig.annotations.Inverse;
 
-public class JGetMethod extends JElement { 
+public class JGetMethod extends JElement implements JTemplateInput  { 
+
+	public JGetMethod(JProject model, String javaDoc, List<JAnnotation> annotations, JClassName declaringClass,
+			JMethodName name, String returnTypeDefinition, JClassName returnType, JClassName underlyingType,
+			boolean isDefault) {
+		super(model, javaDoc, annotations);
+		this.declaringClass = declaringClass;
+		this.name = name;
+		this.returnTypeDefinition = returnTypeDefinition;
+		this.returnType = returnType;
+		this.underlyingType = underlyingType;
+		this.isDefault = isDefault;
+	}
+	
+	public JGetMethod(JGetMethod copy) {
+		this(
+				copy.getModel(),
+				copy.getJavaDoc(),
+				new ArrayList<>(),
+				copy.declaringClass,
+				copy.getName(),
+				copy.getReturnTypeDefinition(),
+				copy.getReturnType(),
+				copy.getUnderlyingType(),
+				copy.isDefault()
+		);
+	}
 
 	private JClassName declaringClass;
 	private JMethodName name;
@@ -24,12 +51,31 @@ public class JGetMethod extends JElement {
 	}*/
 	
 	/**
+	 * @return the JInterface that this method is defined in, if known to the current model. Otherwise null.
 	 * 
-	 * @return the JInterface that this method is defined in.
 	 */
 	public JInterface getDeclaringClass() {
-		return getModel().findClass(declaringClass);
+		JInterface tmp = getModel().findClass(declaringClass);
+		return tmp;
 	}
+	
+	/**
+	 * returns true if this method is defined inthe supplied class
+	 * @param test
+	 * @return
+	 */
+	public boolean declaredBy(JInterface iface) {
+		return getDeclaringClass() != null && getDeclaringClass().equals(iface);
+	}
+	
+	/**
+	 * 
+	 * @return the JInterface that this method is defined in.
+	 *
+	@Override
+	public boolean isInPackage(JName pkg) {
+		return this.getDeclaringClass().isInPackage(pkg);
+	}*/
 	
 	/*
 	 * The underlying return type for a method is 
@@ -62,6 +108,12 @@ public class JGetMethod extends JElement {
 		return name;
 	}
 
+	/**
+	 * gives us a for of the return variable that we would plan to use in an interface specification
+	 * i.e. uses primitives where they were present in the original specification, and is generics returns 
+	 * the form that was specified in the original domain model spec.
+	 * @return
+	 */
 	public String getInterfaceType() {
 		if (isPrimitive()) return getReturnTypeDefinition(); 
 		if (getUnderlyingType() == null) return getReturnType().getSimpleName();
@@ -70,13 +122,40 @@ public class JGetMethod extends JElement {
 		}
 	}
 	
+	/**
+	 * gives us either the primitive name (e.g. int) or the FQN of a non primitive class
+	 * e.g. java.lang.String or if generic the simple Collection class name with the FQN of the
+	 * type parameter e.g. List<java.lang.Integer>. These names can be used where it is complicated
+	 * to get the imports right or there is a risk of name collision, and you want to define the abstract
+	 * type rather than a specific concrete implementation.
+	 * @return
+	 */
 	public String getInterfaceTypeFQN() {
+		if (isPrimitive()) return getReturnTypeDefinition();
 		if (getUnderlyingType() == null) return getReturnType().getCanonicalName();
 		else {
 			return getReturnType().getSimpleName()+"<"+getUnderlyingType().getCanonicalName()+">";
 		}
 	}
 	
+	/**
+	 * gives us either the FQN of the return type. Boxed if needs be.
+	 * e.g. java.lang.String or if generic the simple Collection class name with the FQN of the
+	 * type parameter e.g. List<java.lang.Integer>. These names can be used within parameterised types
+	 * @return
+	 */
+	public String getBoxedTypeFQN() {
+		if (getUnderlyingType() == null) return getReturnType().getCanonicalName();
+		else {
+			return getReturnType().getSimpleName()+"<"+getUnderlyingType().getCanonicalName()+">";
+		}
+	}
+	
+	/**
+	 * Gives us the short form of a return type in a format that is suitable for instantiating
+	 * using default implementations of collection classes.
+	 * @return
+	 */
 	public String getImplementationType() {
 		if (getUnderlyingType() == null) return getReturnType().getSimpleName(); 
 		try {
@@ -96,14 +175,23 @@ public class JGetMethod extends JElement {
 		}
 	}
 	
+	/**
+	 * This return a list of one or two items based on the return type of the
+	 * get method. If this is a generic it will include the type of the generic 
+	 * (e.g. java.util.Set) and the underlying type of the first type parameter 
+	 * @return the fqn of the return type or types if a generic
+	 */
 	public Set<String> getImports() {
 		Set<String> tmp = new HashSet<>();
 		tmp.add(getReturnType().importName());
 		if (getUnderlyingType() == null) return tmp;
+		// This is a generic or an array
 		if (!getReturnType().toString().equals(getUnderlyingType().importName())) {
+			//This is a generic 
 			tmp.add(getUnderlyingType().importName());
 			Class<?> clazz;
 			try {
+				//The implementation type.
 				clazz = Class.forName(getReturnType().toString());
 				if (List.class.isAssignableFrom(clazz))
 					tmp.add(ArrayList.class.getCanonicalName());
@@ -164,6 +252,11 @@ public class JGetMethod extends JElement {
 		return returnType.typeOf(fqn).orElse(Boolean.FALSE);
 	}
 	
+	public boolean isEnum() {
+		if (isParameterised()) return false;
+		return returnType.typeOf(Enum.class).orElse(Boolean.FALSE);
+	}
+	
 	public boolean isCollection() {
 		if (!isParameterised()) return false;
 		return returnType.typeOf(Collection.class).orElse(Boolean.FALSE) ||
@@ -172,7 +265,7 @@ public class JGetMethod extends JElement {
 	
 	public boolean isList(boolean exact) {
 		if (!isParameterised()) return false;
-		if (exact) return returnType.equivalent(List.class);
+		if (exact) return returnType.equivalent(List.class.getCanonicalName());
 		return returnType.typeOf(List.class).orElse(Boolean.FALSE);
 	}
 	
@@ -190,7 +283,7 @@ public class JGetMethod extends JElement {
 	
 	public boolean isSet(boolean exact) {
 		if (!isParameterised()) return false;
-		if (exact) return returnType.equivalent(Set.class);
+		if (exact) return returnType.equivalent(Set.class.getCanonicalName());
 		return returnType.typeOf(Set.class).orElse(Boolean.FALSE);
 	}
 	
@@ -227,7 +320,7 @@ public class JGetMethod extends JElement {
 		this.declaringClass = declaringClass;
 	}
 
-		public String getReturnTypeDefinition() {
+	public String getReturnTypeDefinition() {
 		return returnTypeDefinition;
 	}
 
@@ -241,6 +334,25 @@ public class JGetMethod extends JElement {
 
 	public void setDefault(boolean isDefault) {
 		this.isDefault = isDefault;
+	}
+
+	@Override
+	public JGetMethod clone() {
+		JGetMethod out = copy();
+		out.setAnnotations(
+			this.getAnnotations().stream().map(a -> a.clone()).collect(Collectors.toList())	
+		);
+		return out;
+	}
+
+	@Override
+	public JGetMethod copy() {
+		return new JGetMethod(this);
+	}
+
+	@Override
+	public JPackageMetadata getMetadata() {
+		return this.getDeclaringClass().getMetadata();
 	}
 	
 }

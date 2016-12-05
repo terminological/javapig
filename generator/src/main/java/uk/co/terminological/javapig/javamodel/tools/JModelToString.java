@@ -1,36 +1,30 @@
 package uk.co.terminological.javapig.javamodel.tools;
 
-import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import uk.co.terminological.javapig.javamodel.JAnnotation;
 import uk.co.terminological.javapig.javamodel.JAnnotationEntry;
-import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JAnnotationValue.Primitive;
+import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JMethodName;
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JPackage;
-import uk.co.terminological.javapig.javamodel.JPackageMetadata;
-import uk.co.terminological.javapig.javamodel.JTemplateMetadata;
 
 public class JModelToString extends JModelVisitor<String> {
 
 	@Override
-	public Stream<? extends String> visitModel(JModel in, Stream<String> packages) {
+	public Stream<? extends String> visitModel(JProject in, Stream<String> packages) {
 		return Stream.of("Jmodel:",packages.collect(Collectors.joining("\n")));
 	}
 
 	@Override
-	public Stream<? extends String> visitPackage(JPackage in, Stream<String> metadata, Stream<String> annotations, Stream<String> classes) {
+	public Stream<? extends String> visitPackage(JPackage in, Stream<String> annotations, Stream<String> classes) {
 		return start()
 				.with(
 						"{ "+in.getName()+":",
-						"\tmetadata: [",
-						"\t\t"+metadata.collect(Collectors.joining("; ")),
-						"\t]",
 						"\tannotations: [")
 				.with(
 						annotations.map(m -> "\t\t"+m))
@@ -43,24 +37,6 @@ public class JModelToString extends JModelVisitor<String> {
 						"\t]",
 						"}")
 				.end();
-	}
-
-	@Override
-	public Stream<? extends String> visitPackageMetadata(JPackageMetadata in, Stream<String> templates) {
-		
-		return Stream.of(
-				"directory="+in.getDirectory().getAbsolutePath(),
-				"["+templates.collect(Collectors.joining(", "))+"]"
-				);
-	}
-
-	@Override
-	public Stream<? extends String> visitTemplateMetadata(JTemplateMetadata in) {
-		return Stream.of(
-				in.getTemplateFilename(),
-				in.getClassNameTemplate(),
-				Arrays.toString(in.getScope())
-				);
 	}
 
 	@Override

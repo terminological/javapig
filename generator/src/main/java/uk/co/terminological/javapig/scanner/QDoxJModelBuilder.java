@@ -2,7 +2,11 @@ package uk.co.terminological.javapig.scanner;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.annotation.Generated;
 
@@ -17,46 +21,46 @@ import com.thoughtworks.qdox.model.JavaPackage;
 import com.thoughtworks.qdox.model.JavaType;
 import com.thoughtworks.qdox.model.expression.AnnotationValue;
 
-import java.util.Arrays;
 import uk.co.terminological.javapig.annotations.Model;
-import uk.co.terminological.javapig.annotations.Template;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
 import uk.co.terminological.javapig.javamodel.JAnnotationEntry;
 import uk.co.terminological.javapig.javamodel.JAnnotationValue;
 import uk.co.terminological.javapig.javamodel.JClassName;
-import uk.co.terminological.javapig.javamodel.JElement;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JMethodName;
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JPackage;
-import uk.co.terminological.javapig.javamodel.JTemplateMetadata;
+import uk.co.terminological.javapig.javamodel.JPackageMetadata;
 import uk.co.terminological.javapig.javamodel.tools.JNameBuilder;
 
 public class QDoxJModelBuilder {
 
 	private JavaProjectBuilder jpb;
 	ClassLibraryBuilder libraryBuilder;
-	JModel model;
+	JProject model;
 
-	QDoxJModelBuilder(JModel model) {
+	QDoxJModelBuilder(JProject model) {
 		libraryBuilder = new SortedClassLibraryBuilder(); 
 		libraryBuilder.appendDefaultClassLoaders();
 		jpb = new JavaProjectBuilder( libraryBuilder );
 		this.model = model;
 	}
 
-	public static JModel scanModel(File... files) {
-		QDoxJModelBuilder out = new QDoxJModelBuilder(new JModel());
-		out.scanSourceModel(files);
+	public static JProject scanModel(File[] files, File... others) {
+		QDoxJModelBuilder out = new QDoxJModelBuilder(new JProject());
+		List<File> tmp = new ArrayList<>(); 
+		tmp.addAll(Arrays.asList(files));
+		tmp.addAll(Arrays.asList(others));
+		out.scanSourceModel(tmp);
 		return out.getModel();
 	}
 
-	public JModel getModel() {
+	public JProject getModel() {
 		return model;
 	}
 
-	private void scanSourceModel(File[] files) {
+	private void scanSourceModel(List<File> files) {
 		for (File sourceFolder: files) {
 			jpb.addSourceTree(sourceFolder);
 		}
@@ -78,17 +82,17 @@ public class QDoxJModelBuilder {
 				m.getReturnType().equals(JavaType.VOID)
 			) return null;
 		
-		JGetMethod out = new JGetMethod();
-		out.setModel(model);
-		out.setJavaDoc(m.getComment());
-		createAnnotations(m.getAnnotations(), out, new RecursiveVisitor(m,this.jpb));
-
-		out.setDeclaringClass(JNameBuilder.from(m.getDeclaringClass()));
-		out.setName(JNameBuilder.from(m));
-		out.setReturnTypeDefinition(m.getReturnType().getValue());
-		out.setReturnType(JNameBuilder.from(QDoxUtils.box(m.getReturnType(), jpb)));
-		out.setUnderlyingType(JNameBuilder.from(QDoxUtils.underlyingReturnType(m,jpb)));
-		out.setDefault(m.isDefault());
+		JGetMethod out = new JGetMethod(
+				model,
+				m.getComment(),
+				createAnnotations(m.getAnnotations(), new RecursiveVisitor(m,this.jpb)),
+				JNameBuilder.from(m.getDeclaringClass()),
+				JNameBuilder.from(m),
+				m.getReturnType().getValue(),
+				JNameBuilder.from(QDoxUtils.box(m.getReturnType(), jpb)),
+				JNameBuilder.from(QDoxUtils.underlyingReturnType(m,jpb)),
+				m.isDefault());
+		
 		model.addMethod(out);
 		return out;
 
@@ -98,23 +102,27 @@ public class QDoxJModelBuilder {
 
 	public JInterface createClass(JavaClass clazz) {
 		JClassName cn = JNameBuilder.from(clazz);
+		
+		JavaPackage pkg = clazz.getPackage();
+		if (!model.packageIsDefined(pkg.getName())) createPackage(pkg);
+		
+		
+		JInterface out = new JInterface(
+				model,
+				clazz.getComment(),
+				createAnnotations(clazz.getAnnotations(), new RecursiveVisitor(clazz,this.jpb)),
+				cn,
+				clazz.getInterfaces().stream()
+					.map(iface -> JNameBuilder.from(iface))
+					.collect(Collectors.toSet())
+				);
 
-		JInterface out = new JInterface();
-		out.setModel(model);
-		out.setJavaDoc(clazz.getComment());
-		createAnnotations(clazz.getAnnotations(), out, new RecursiveVisitor(clazz,this.jpb));
-
-		out.setName(cn);
+		clazz.getSource().getImports(); //Do something with this
+		
 		for (JavaMethod m: clazz.getMethods(true)) {
 			createMethod(m);
 		}
-		for (JavaClass iface: clazz.getInterfaces()) { 
-			out.getSupertypes().add(JNameBuilder.from(iface));
-		}
 
-		JavaPackage pkg = clazz.getPackage();
-		if (!model.packageIsDefined(pkg.getName())) createPackage(pkg);
-		out.setPkg(pkg.getName());
 		model.addInterface(out);
 		
 		return out;
@@ -126,58 +134,71 @@ public class QDoxJModelBuilder {
 
 		if (model.packageIsDefined(pkg.getName())) return model.findPackage(pkg.getName());
 
-		JPackage out = new JPackage();
-		out.setModel(model);
-		out.setJavaDoc(pkg.getComment());
-		createAnnotations(pkg.getAnnotations(), out, new RecursiveVisitor(pkg, this.jpb));
-
-		out.setName(pkg.getName());
-
-		Model metadata = getModelAnn(pkg) ;
-		String directory = metadata.directory();
-		out.getMetadata().setDirectory(new File(directory));
-		out.getMetadata().getBuiltIn().addAll(Arrays.asList(metadata.builtins()));
-		for (Template template: metadata.templates()) {
-			JTemplateMetadata tmp = new JTemplateMetadata();
-			tmp.setClassNameTemplate(template.classnameTemplate());
-			tmp.setScope(template.appliesTo());
-			tmp.setTemplateFilename(template.filename());
-			tmp.setExtension(template.extension());
-			tmp.setAdaptor(template.adaptor());
-			out.getMetadata().getTemplates().add(tmp);
-		}
-
+		Optional<Model> ann = getModelAnn(pkg);
+		Optional<JPackageMetadata> meta = ann.map(JPackageMetadata::from);
+		
+		JPackage out = new JPackage(
+				model,
+				pkg.getComment(),
+				createAnnotations(pkg.getAnnotations(), new RecursiveVisitor(pkg, this.jpb)),
+				pkg.getName(),
+				meta);
+		
 		model.addPackage(out);
 		return out;
 	}
 
 
-	private void createAnnotations(List<JavaAnnotation> anns, JElement p, RecursiveVisitor v) {
+	private List<JAnnotation> createAnnotations(List<JavaAnnotation> anns, RecursiveVisitor v) {
+		List<JAnnotation> p = new ArrayList<>();
 		for (JavaAnnotation ann: anns) {
-			p.getAnnotations().add(createAnnotation(ann,v));
+			p.add(createAnnotation(ann,v));
 		}
+		return p;
 	}
 
-	public static <T extends Annotation> JAnnotation createAnnotation(JavaAnnotation ann, RecursiveVisitor v) {
-		JAnnotation out = new JAnnotation();
-		out.setName(ann.getType().getValue());
+	private static <T extends Annotation> JAnnotation createAnnotation(JavaAnnotation ann, RecursiveVisitor v) {
+		
+		List<JAnnotationEntry> entries = new ArrayList<>();
 		for (String m: ann.getPropertyMap().keySet()) {
 			AnnotationValue tmp = ann.getPropertyMap().get(m);
 			Object val = tmp.accept(v); 
-			out.getValues().add(JAnnotationEntry.with(
+			entries.add(new JAnnotationEntry(
 					JMethodName.from(ann.getType().getFullyQualifiedName()+"#"+m),
 					(val instanceof JavaType) ? JAnnotationValue.of(JNameBuilder.from((JavaClass) val)) : JAnnotationValue.of(val)
 					));
 		}
-		return out;
+		
+		
+		
+		return new JAnnotation(
+				v.fqnForSimpleName(ann),
+				ann.getType().getValue(),
+				entries);
+		
 	}
 
 	public static class RecursiveVisitor extends QDoxUtils.WorkaroundVisitor {
 		
-		public RecursiveVisitor(JavaAnnotatedElement prefix, JavaProjectBuilder jpb) {
-			super(prefix, jpb);
+		
+		public RecursiveVisitor(JavaAnnotatedElement context, JavaProjectBuilder jpb) {
+			super(context, jpb);
+			
 		}
 
+		public Optional<String> fqnForSimpleName(JavaAnnotation ann) {
+			String simpleName = ann.getType().getValue();
+			JavaClass tmp;
+			if (context instanceof JavaClass) {
+				tmp = (JavaClass) context;
+			} else if (context instanceof JavaMethod) {
+				tmp = ((JavaMethod) context).getDeclaringClass();
+			} else {
+				return Optional.empty(); 
+			}
+			return tmp.getSource().getImports().stream().filter(s -> s.endsWith(simpleName)).findFirst();
+		}
+		
 		@Override
 		public Object visit(JavaAnnotation annotation) throws UnsupportedOperationException {
 			return createAnnotation(annotation,new RecursiveVisitor(this.context, this.jdb));
@@ -199,16 +220,11 @@ public class QDoxJModelBuilder {
 		return getModelAnn(tmp) != null;
 	}
 
-	private Model getModelAnn(JavaPackage tmp) {
-		while (tmp != null) {
-			tmp = jpb.getPackageByName(tmp.getName());
-			// see http://paul-hammant.github.io/Old_Qdox_Issues/255/
-			if (QDoxUtils.hasAnnotation(Model.class, tmp)) {
-				JAnnotation ann = createAnnotation(QDoxUtils.getAnnotation(Model.class, tmp), new RecursiveVisitor(tmp, this.jpb));
-				return (Model) ann.convert(Model.class);
-			}
-			tmp = tmp.getParentPackage();
+	private Optional<Model> getModelAnn(JavaPackage tmp) {
+		if (QDoxUtils.hasAnnotation(Model.class, tmp)) {
+			JAnnotation ann = createAnnotation(QDoxUtils.getAnnotation(Model.class, tmp), new RecursiveVisitor(tmp, this.jpb));
+			return Optional.of((Model) ann.convert(Model.class));
 		}
-		return null;
+		return Optional.empty();
 	}
 }

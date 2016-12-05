@@ -4,13 +4,13 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-<#list class.getImports(fqn+"Fluent") as import>
+<#list class.getImports(fqn+"Fluent", "java.util.Observable") as import>
 import ${import};
 </#list>
-<#if package.getMetadata().isEnabled("VISITOR")>import ${model.getRootPackage()}.Visitor;</#if>
+<#if package.getMetadata().isEnabled("VISITOR")>import ${rootPackage}.Visitor;</#if>
 
 @Generated({"uk.co.terminological.javapig.JModelWriter"})
-public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata().isEnabled("VISITOR")>, Visitor.Acceptor</#if>  {
+public class ${classname} extends Observable implements ${sn}, ${sn}Fluent<#if package.getMetadata().isEnabled("VISITOR")>, Visitor.Acceptor</#if>  {
 
 	public static ${sn}Fluent create() {
 		return new ${classname}();
@@ -76,6 +76,7 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 	<#list class.getMethods() as method>
 	public void ${method.getName().setter()}(${method.getInterfaceType()} value) {
 		this.${method.getName().field()} = value;
+		this.setChanged();
 		<#if method.hasInverseMethod()>
 			<#assign imethod = method.getInverseMethod()/>
 			<#if imethod.isCollection()>
@@ -84,11 +85,13 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 		((${method.getInterfaceType()}Fluent) value).${imethod.getName().setter()}(this);
 			</#if>
 		</#if>
+		this.notifyObservers();
 	}
 	
 		<#if method.isCollection()>
 	public void ${method.getName().adder()}(${method.getUnderlyingType().getSimpleName()} value) {
 		${method.getName().getter()}().add(value);
+		this.setChanged();
 		<#if method.hasInverseMethod()>
 			<#assign imethod = method.getInverseMethod()/>
 			<#if imethod.isCollection()>
@@ -97,11 +100,13 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 		((${method.getInterfaceType()}Fluent) value).${imethod.getName().setter()}(this);
 			</#if>
 		</#if>
-	
+		this.notifyObservers();
 	}
 	
 	public void ${method.getName().addAll()}(Collection<? extends ${method.getUnderlyingType().getSimpleName()}> values) {
 		${method.getName().getter()}().addAll(values);
+		this.setChanged();
+		this.notifyObservers();
 	}
 	
 		<#elseif method.isOptional()>
@@ -146,4 +151,5 @@ public class ${classname} implements ${sn}, ${sn}Fluent<#if package.getMetadata(
 	<@c.hashCode class/>
 
 	<@c.equals class classname/>
+	
 }

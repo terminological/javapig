@@ -12,18 +12,17 @@ import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JMethodName;
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProjectComponent;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JPackage;
-import uk.co.terminological.javapig.javamodel.JPackageMetadata;
-import uk.co.terminological.javapig.javamodel.JTemplateMetadata;
 
 public abstract class JModelVisitor<OUT> {
 
-	public Stream<? extends OUT> visit(JModelComponent in) {
+	public Stream<? extends OUT> visit(JProjectComponent in) {
 		
-		if (in instanceof JModel) {
+		if (in instanceof JProject) {
 			
-			JModel tmp = (JModel) in;
+			JProject tmp = (JProject) in;
 			return visitModel(
 					tmp,
 					tmp.getPackages().stream().flatMap(a -> this.visit(a))
@@ -35,24 +34,9 @@ public abstract class JModelVisitor<OUT> {
 			JPackage tmp = (JPackage) in;
 			return visitPackage(
 					tmp,
-					Stream.of(tmp.getMetadata()).flatMap(a -> this.visit(a)),
 					tmp.getAnnotations().stream().flatMap(a -> this.visit(a)),
 					tmp.getClasses().stream().flatMap(a -> this.visit(a))
 			);
-			
-		} else if (in instanceof JPackageMetadata) {
-			
-			JPackageMetadata tmp = (JPackageMetadata) in;
-			return visitPackageMetadata(
-					tmp,
-					tmp.getTemplates().stream().flatMap(a -> this.visit(a))
-			);
-		
-		} else if (in instanceof JTemplateMetadata) {
-			
-			JTemplateMetadata tmp = (JTemplateMetadata) in;
-			return visitTemplateMetadata(
-					tmp);
 			
 		} else if (in instanceof JInterface) {
 			
@@ -76,7 +60,7 @@ public abstract class JModelVisitor<OUT> {
 			JAnnotation tmp = (JAnnotation) in;
 			return visitAnnotation(
 					tmp,
-					tmp.getValues().stream().flatMap(a -> this.visit(a))
+					tmp.getEntries().stream().flatMap(a -> this.visit(a))
 			);
 			
 		} else if (in instanceof JAnnotationEntry) {
@@ -106,12 +90,10 @@ public abstract class JModelVisitor<OUT> {
 		
 	}
 		
+	//Fix this so that the model reflects the 
 	
-	
-	public abstract Stream<? extends OUT> visitModel(JModel in, Stream<OUT> packages);
-	public abstract Stream<? extends OUT> visitPackage(JPackage in, Stream<OUT> metadata, Stream<OUT> annotations, Stream<OUT> classes);
-	public abstract Stream<? extends OUT> visitPackageMetadata(JPackageMetadata in, Stream<OUT> templates);
-	public abstract Stream<? extends OUT> visitTemplateMetadata(JTemplateMetadata in);
+	public abstract Stream<? extends OUT> visitModel(JProject in, Stream<OUT> packages);
+	public abstract Stream<? extends OUT> visitPackage(JPackage in, Stream<OUT> annotations, Stream<OUT> classes);
 	public abstract Stream<? extends OUT> visitInterface(JInterface in, Stream<OUT> annotations, Stream<OUT> methods);
 	public abstract Stream<? extends OUT> visitGetMethod(JGetMethod in, Stream<OUT> annotations);
 	public abstract Stream<? extends OUT> visitAnnotation(JAnnotation in, Stream<OUT> annotationEntries);

@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import uk.co.terminological.javapig.javamodel.tools.JModelComponent;
+public abstract class JElement extends JProjectComponent {
 
-public class JElement extends JModelComponent {
-
-	private JModel model;
+	private JProject model;
 	private List<JAnnotation> annotations = new ArrayList<>();
 	private String javaDoc;
+	
+	// Logic
 	
 	public <T extends Annotation> boolean isAnnotationPresent(Class<T> annotation) {
 		return getAnnotation(annotation) != null;
@@ -33,25 +33,36 @@ public class JElement extends JModelComponent {
 			return tmp.convert(annotation);
 		}
 	}
-
-	public List<JAnnotation> getAnnotations() {
-		return annotations;
-	}
-
+	
 	@SuppressWarnings("unchecked")
 	public <T extends Annotation> T getAnnotation(String annotation) throws ClassNotFoundException {
 		return getAnnotation((Class<T>) Class.forName(annotation));
 	}
 	
+	
+	//JavaBean
+	
+	public JElement(JProject model, String javaDoc, List<JAnnotation> annotations) {
+		this.model = model;
+		this.javaDoc = javaDoc;
+		this.annotations = annotations;
+	}
+	
+	// getters and setters
+	
+	public List<JAnnotation> getAnnotations() {
+		return annotations;
+	}
+
 	public void setAnnotations(List<JAnnotation> annotations) {
 		this.annotations = annotations;
 	}
 
-	public JModel getModel() {
+	public JProject getModel() {
 		return model;
 	}
 
-	public void setModel(JModel model) {
+	public void setModel(JProject model) {
 		this.model = model;
 	}
 
@@ -62,6 +73,5 @@ public class JElement extends JModelComponent {
 	public void setJavaDoc(String javaDoc) {
 		this.javaDoc = javaDoc;
 	}
-	
 	
 }

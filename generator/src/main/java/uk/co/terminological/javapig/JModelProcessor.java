@@ -22,7 +22,7 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.scanner.AptJModelBuilder;
 
 @SupportedAnnotationTypes(value= {"uk.co.terminological.javapig.annotations.Model"})
@@ -33,7 +33,7 @@ public class JModelProcessor extends AbstractProcessor {
 	private Filer filer;
 	private FileObject model;
 	private File modelFile;
-	private JModel packages;
+	private JProject packages;
 
 	/**
 	 * The processing environment is initialised.
@@ -58,7 +58,7 @@ public class JModelProcessor extends AbstractProcessor {
 
 				FileInputStream fileIn = new FileInputStream(modelFile);
 				ObjectInputStream in = new ObjectInputStream(fileIn);
-				packages = (JModel) in.readObject();
+				packages = (JProject) in.readObject();
 				in.close();
 				fileIn.close();
 
@@ -71,14 +71,14 @@ public class JModelProcessor extends AbstractProcessor {
 			} catch (IOException e) {
 
 				System.out.println("Meta-model file was found but seems to be corrupt. Replacing");			
-				packages = new JModel();
+				packages = new JProject();
 
 			} 
 
 		} catch (IOException e) {
 
 			System.out.println("No model file found. Probably mvn clean has been called");
-			packages = new JModel();	
+			packages = new JProject();	
 
 		}
 

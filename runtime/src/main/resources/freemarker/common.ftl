@@ -58,6 +58,7 @@
 				while (rhs.hasNext()) {
 					if (!lhs.remove(rhs.next())) return false;
 				}
+				if (!lhs.isEmpty()) return false;
 			}
 				</#if>
 			<#else>
@@ -69,3 +70,29 @@
 		return true;
 	}
 </#macro>
+
+<#-- 
+The following functions copy annotations from source interface to target class
+They are a work in progress. The problem is that firstly the imports don't get correctly
+set up and secondly it is not clear under what circumstances you want to do this. It is not 
+a globally useful feature if annotations are inherited.
+-->
+
+<#macro copyAnnotations classOrMethod indent>
+<#list classOrMethod.getAnnotations() as annotation><@printAnnotation annotation indent/>
+</#list>
+</#macro>
+
+<#macro printAnnotation annotation indent>
+<#list 0..<indent as i>	</#list>@${annotation.getName()}<#if annotation.getValues()?size gt 0>(<#if annotation.getValues()?size gt 1>
+<#list 0..<indent as i>	</#list></#if><#list annotation.getValues() as annotationEntry><@printAnnotationEntry annotationEntry indent+1/><#if !annotationEntry?is_last>,
+<#list 0..<indent as i>	</#list></#if></#list>)</#if>
+</#macro>
+
+<#macro printAnnotationEntry annotationEntry indent>${annotationEntry.getMethod().getter()}=<#if annotationEntry.getValues()?size gt 1>{
+<#list annotationEntry.getValues() as annotationValue>
+<#list 0..<indent as i>	</#list><@printAnnotationValue annotationValue indent+1/><#if !annotationValue?is_last>,</#if>
+</#list>}<#else><#if annotationEntry.getValues()?first??><@printAnnotationValue annotationEntry.getValues()?first 0/></#if></#if></#macro>
+
+<#macro printAnnotationValue annotationValue indent><#if annotationValue.isPrimitive()>${annotationValue.getValue()}</#if><#if annotationValue.isClass()>${annotationValue.getValue().getCanonicalName()}.class</#if><#if annotationValue.isAnnotation()><@printAnnotation annotationValue.getValue() indent+1/></#if></#macro>
+

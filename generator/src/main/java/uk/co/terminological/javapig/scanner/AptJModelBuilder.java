@@ -1,9 +1,10 @@
 package uk.co.terminological.javapig.scanner;
 
-import java.io.File;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -24,23 +25,21 @@ import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import javax.lang.model.util.Types;
 
 import uk.co.terminological.javapig.annotations.Model;
-import uk.co.terminological.javapig.annotations.Template;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
 import uk.co.terminological.javapig.javamodel.JAnnotationEntry;
 import uk.co.terminological.javapig.javamodel.JAnnotationValue;
 import uk.co.terminological.javapig.javamodel.JClassName;
-import uk.co.terminological.javapig.javamodel.JElement;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JPackage;
-import uk.co.terminological.javapig.javamodel.JTemplateMetadata;
+import uk.co.terminological.javapig.javamodel.JPackageMetadata;
 import uk.co.terminological.javapig.javamodel.tools.JNameBuilder;
 import uk.co.terminological.javapig.scanner.AptUtils.CodeGenerationIncompleteException;
 
 public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 
-	JModel model;
+	JProject model;
 	ProcessingEnvironment penv;
 	Elements el;
 	Types ty;
@@ -50,7 +49,7 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	 * ECJ tends to compile in bits and pieces so previous runs can create 
 	 * @param penv - the processing environment from the processor
 	 */
-	public AptJModelBuilder(JModel list, ProcessingEnvironment penv) {
+	public AptJModelBuilder(JProject list, ProcessingEnvironment penv) {
 		this.model = list;
 		this.penv = penv;
 		this.el = penv.getElementUtils();
@@ -62,7 +61,7 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	 * scanning complete
 	 * @return
 	 */
-	public JModel getModel() {
+	public JProject getModel() {
 		return model;
 	}
 
@@ -77,24 +76,17 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 		// definition with an empty definition. This will remove any
 		// old class definitions in there
 		if (notGenerated(e) && isInModel(e) && e.getKind().equals(ElementKind.PACKAGE)) {
-			JPackage out = new JPackage();
-			out.setName(e.getQualifiedName().toString());
-			out.setModel(model);
 			
-			Model ann = getModelAnn(e);
-			out.getMetadata().setDirectory(new File(ann.directory()));
-			for (Template template: ann.templates()) {
-				JTemplateMetadata tmp = new JTemplateMetadata();
-				tmp.setClassNameTemplate(template.classnameTemplate());
-				tmp.setScope(template.appliesTo());
-				tmp.setTemplateFilename(template.filename());
-				tmp.setExtension(template.extension());
-				tmp.setAdaptor(template.adaptor());
-				out.getMetadata().getTemplates().add(tmp);
-			}
-			out.getMetadata().getBuiltIn().addAll(Arrays.asList(ann.builtins()));
+			Optional<Model> ann = getModelAnn(e);
+			Optional<JPackageMetadata> meta = ann.map(JPackageMetadata::from);
 			
-			createAnnotations(e,out);
+			JPackage out = new JPackage(
+					model,
+					el.getDocComment(e),
+					createAnnotations(e),
+					e.getQualifiedName().toString(),
+					meta);
+			
 			this.model.addPackage(out);
 			return super.visitPackage(e, null);
 		} else {
@@ -111,19 +103,19 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	public Void visitType(TypeElement clazz, Void v) {
 		JClassName cn = JNameBuilder.from(clazz);
 		if (notGenerated(clazz) && isInModel(clazz) && clazz.getKind().equals(ElementKind.INTERFACE)) {
-			JInterface out = new JInterface();
-			out.setName(cn);
-			out.setModel(model);
-			out.setJavaDoc(el.getDocComment(clazz));
 
-			for (TypeMirror iface: clazz.getInterfaces()) { 
-				TypeElement ifaceEl = (TypeElement) ((DeclaredType) iface).asElement();
-				out.getSupertypes().add(JClassName.from(ifaceEl.getQualifiedName().toString()));
-			}
-
-			createAnnotations(clazz,out);
+			JInterface out = new JInterface(
+					model,
+					el.getDocComment(clazz),
+					createAnnotations(clazz),
+					cn,
+					clazz.getInterfaces().stream()
+						.map(iface-> (TypeElement) ((DeclaredType) iface).asElement())
+						.map(ifaceEl -> JClassName.from(ifaceEl.getQualifiedName().toString()))
+						.collect(Collectors.toSet())
+					
+					);
 			
-			out.setPkg(cn.getPackageName());
 			if (!model.packageIsDefined(cn.getPackageName())) scan(el.getPackageElement(cn.getPackageName()));
 			model.addInterface(out);
 			return super.visitType(clazz, null);
@@ -142,17 +134,18 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 				m.getReturnType().getKind().equals(TypeKind.VOID)
 			) return DEFAULT_VALUE;
 		if (notGenerated(m) && isInModel(m) && m.getKind().equals(ElementKind.METHOD)) {
-			JGetMethod out = new JGetMethod();
-			out.setModel(model);
-			out.setDeclaringClass(JNameBuilder.from((TypeElement) m.getEnclosingElement()));
-			out.setName(JNameBuilder.from(m));
-			out.setReturnTypeDefinition(m.getReturnType().toString());
-			out.setReturnType(JClassName.from(AptUtils.typeToString(m.getReturnType())));
-			out.setUnderlyingType(JClassName.from(AptUtils.firstParameter(m.getReturnType())));
-			out.setJavaDoc(el.getDocComment(m));
-			createAnnotations(m, out);
-			out.setDefault(m.getModifiers().contains(Modifier.DEFAULT));
-			out.getDeclaringClass().getMethods().add(out);
+			JGetMethod out = new JGetMethod(
+					model,
+					el.getDocComment(m),
+					createAnnotations(m),
+					JNameBuilder.from((TypeElement) m.getEnclosingElement()),
+					JNameBuilder.from(m),
+					m.getReturnType().toString(),
+					JClassName.from(AptUtils.typeToString(m.getReturnType())),
+					JClassName.from(AptUtils.firstParameter(m.getReturnType())),
+					m.getModifiers().contains(Modifier.DEFAULT)
+					);
+			if (out.getDeclaringClass() != null) out.getDeclaringClass().getMethods().add(out);
 			model.addMethod(out);
 			return super.visitExecutable(m, null);
 		} else {
@@ -187,35 +180,27 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 	 * This looks at the processor tree hierarchy. However it does not look into parent packages
 	 * as java does not regard packages to nest in the way humans believe they do.
 	 */
-	private Model getModelAnn(Element tmp) {
+	private Optional<Model> getModelAnn(Element tmp) {
 		return getModelAnn(el.getPackageOf(tmp));
 	}
 	
-	private Model getModelAnn(PackageElement tmp) {
-		while (tmp != null) {
-			if (tmp.getAnnotation(Model.class) != null) return tmp.getAnnotation(Model.class);
-			String pkgname = tmp.getQualifiedName().toString();
-			if (!pkgname.contains(".")) return null; 
-			String parentPkgname = pkgname.substring(0, pkgname.lastIndexOf("."));
-			tmp = el.getPackageElement(parentPkgname);
-		}
-		return null;
+	private Optional<Model> getModelAnn(PackageElement tmp) {
+		if (tmp.getAnnotation(Model.class) != null) return Optional.of(tmp.getAnnotation(Model.class));
+		return Optional.empty();
 	}
 	
-	private void createAnnotations(Element e, JElement p) {
-		for (AnnotationMirror am: el.getAllAnnotationMirrors(e)) {
-			p.getAnnotations().add(createAnnotation(am, el));
-		}
+	private List<JAnnotation> createAnnotations(Element e) {
+		return el.getAllAnnotationMirrors(e).stream().map(am -> createAnnotation(am,el)).collect(Collectors.toList());
 	}
 	
 	private static JAnnotation createAnnotation(AnnotationMirror am, Elements el) {
-		JAnnotation out = new JAnnotation();
-		out.setName(am.getAnnotationType().asElement().getSimpleName().toString());
+		
+		List<JAnnotationEntry> values = new ArrayList<>();
 		for (Entry<? extends ExecutableElement,? extends AnnotationValue> pair: el.getElementValuesWithDefaults(am).entrySet()) {
 			Object value; 
 			try {
 				value = pair.getValue().accept(new AnnotationConverter(el),null);
-				out.getValues().add(JAnnotationEntry.with(
+				values.add(new JAnnotationEntry(
 						JNameBuilder.from(pair.getKey()), 
 						JAnnotationValue.of(value)));
 			} catch (CodeGenerationIncompleteException ignored) {
@@ -223,7 +208,13 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 				// stage of compilation
 			}
 		}
-		return out;
+		
+		return new JAnnotation(
+			Optional.of(((TypeElement) am.getAnnotationType().asElement()).getQualifiedName().toString()),
+			am.getAnnotationType().asElement().getSimpleName().toString(),
+			values
+		);
+		
 	}
 
 	private static class AnnotationConverter extends SimpleAnnotationValueVisitor8<Object, Void> {

@@ -19,7 +19,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(value = { ElementType.PACKAGE })
 public @interface Model {
-	String directory() default "";
-	Template[] templates() default {};
 	BuiltIn[] builtins() default {};
+	String[] plugins() default {};
 }

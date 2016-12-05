@@ -7,36 +7,96 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import uk.co.terminological.javapig.javamodel.tools.JModelComponent;
+import uk.co.terminological.javapig.StringCaster;
 import uk.co.terminological.javapig.javamodel.tools.JNameBuilder;
-import uk.co.terminological.javapig.scanner.StringCaster;
 
-public class JAnnotation extends JModelComponent { 
+/**
+ * represents an annotation in the source code and contains the detail of the 
+ * annotation in a way that can be accessed in template and plugins.
+ * @author terminological
+ *
+ */
+public class JAnnotation extends JProjectComponent { 
 	
-	private String annotationName;
-	private List<JAnnotationEntry> values = new ArrayList<>();
-	//private Class<? extends Annotation> type;
-		
-	public List<JAnnotationEntry> getValues() {
-		return values;
+	public JAnnotation(Optional<String> annotationClassFQN, String annotationName, List<JAnnotationEntry> entries) {
+		this.annotationName = annotationName;
+		this.entries = entries;
+		this.fqnOrNull = annotationClassFQN.orElse(null);
 	}
-	public void setValues(List<JAnnotationEntry> values) {
-		this.values = values;
+	
+	public JAnnotation(JAnnotation copy) {
+		this(
+				Optional.ofNullable(copy.fqnOrNull),
+				copy.getName(),
+				new ArrayList<>()
+		);
+	}
+	
+	/**
+	 * Method to access all the imports that are needed to make this annotation
+	 * This includes the fqn of the annotation itself but also the 
+	 * fqn of any classes referenced in the annotations<br/>
+	 * 
+	 * There is a scenario where the FQN of the annotation cannot be determined
+	 * by QDox, when dealing with package level annotations, and this cannot be
+	 * used reliably on package level annotations if using it as a Maven plugin
+	 * @return a set of strings representing the FQN of imports for this annotation
+	 */
+	public Set<String> getImports() {
+		Set<String> out = entries.stream()
+		.flatMap(ae -> ae.getValues().stream())
+		.flatMap(av -> av.getImports().stream())
+		.collect(Collectors.toSet());
+		if (this.fqnOrNull != null) out.add(this.fqnOrNull);
+		return out;
+	}
+	
+	private String fqnOrNull;
+	private String annotationName;
+	private List<JAnnotationEntry> entries = new ArrayList<>();
+	//private Class<? extends Annotation> type;
+	
+	
+	public List<JAnnotationEntry> getEntries() {
+		return entries;
+	}
+	
+	public void setEntries(List<JAnnotationEntry> values) {
+		this.entries = values;
 	}
 	
 	public List<JAnnotationValue<?>> getValues(String keyName) {
-		return values.stream()
+		return entries.stream()
 			.filter(a -> a.getMethod().getter().equals(keyName))
 			.flatMap(a -> a.getValues().stream())
 			.collect(Collectors.toList());
 	}
 	
+	/**
+	 * Get this annotation as a instance of the given annotation type.
+	 * If the wrong annotation type is given there will be many downstream errors, The
+	 * type must be specified for 2 reasons. Firstly it ensures that the annotation type
+	 * is compiled and known to the runtime, secondly in some circumstances the FQN of the
+	 * annotation is unknowable. <br>
+	 *  
+	 * Typically this is going to be used in plugins rather than in templates.
+	 *  
+	 * @see {@link uk.co.terminological.javapig.javamodel.JElement} - which exposes this to the template engine
+	 * @param type - The type of this annotation. This must match the defined type.
+	 * @return an instance of that annotation class.
+	 */
 	public <T extends Annotation> T convert(Class<T> type) {
 		return convertToJavaLang(this, type);
 	}
 	
+	/*
+	 * Creates a proxy - wrapping an annotation parsed from the source code into an
+	 * instance of the annotation class itself 
+	 */
 	@SuppressWarnings("unchecked")
 	private static <X> X convertToJavaLang(final JAnnotation annotation, Class<X> annotationClass) {
 	    
@@ -55,7 +115,7 @@ public class JAnnotation extends JModelComponent {
                         
                         JMethodName mname = JNameBuilder.from(method);
                         List<JAnnotationValue<?>>  value = annotation
-                        		.getValues().stream()
+                        		.getEntries().stream()
                         		.filter(e -> e.getMethod().equals(mname))
                         		.findFirst()
                         		.map(ae -> ae.getValues()).orElse(null)
@@ -66,6 +126,8 @@ public class JAnnotation extends JModelComponent {
                         }
                         
                         if (method.getReturnType().isArray()) {
+                        	
+                        	//TODO: this should probably be fixed in JAnnotationValue
                         	
                         	Object[] out = (Object[]) Array.newInstance(method.getReturnType().getComponentType(), value.size());
                         	int i=0;
@@ -85,6 +147,11 @@ public class JAnnotation extends JModelComponent {
         return proxy;
 	}
 	
+	/*
+	 * Utility to unwrap the values into 
+	 * N.B Enums are held as Strings in the JAnnotation model. This is to allow them to 
+	 * be easily manipulated in the template world. They are cast back to Enums here.
+	 */
 	@SuppressWarnings("unchecked")
 	private static <X extends Object> X unwrap(JAnnotationValue<?> singleValue, Class<X> expectedType) throws ClassNotFoundException {
 		if (singleValue instanceof JAnnotationValue.Annotation) {
@@ -102,19 +169,49 @@ public class JAnnotation extends JModelComponent {
         }
 	}
 	
+	/**
+	 * The simple name of the annotation. This is guaranteed to be defined. It does not
+	 * include a "@"
+	 * @return e.g. "Deprecated" if annotation was "@Deprecated"
+	 */
 	public String getName() {
 		return annotationName;
 	}
+	
+	/**
+	 * The fully qualified name of the annotation. 
+	 * Sometimes this is not known particularly in the example of a package-info level annotation 
+	 * @return a fqn or "&ltunknown&gt"
+	 */
+	public String getCanonicalName() {
+		return (fqnOrNull == null ? "<unknown>" : fqnOrNull);
+	}
+	
+	
+	/**
+	 * Allows us to swap the name of an annotation for another. Best to use FQN here if known.
+	 * The effect of this is somewhat undefined, and possibly shoudl not be generally part of the API.
+	 * @param annotationName
+	 */
 	public void setName(String annotationName) {
-		if (annotationName.contains(".")) 
-			annotationName = annotationName.substring(annotationName.lastIndexOf(">"));
-		this.annotationName = annotationName;
+		if (annotationName.contains(".")) { 
+			this.annotationName = annotationName.substring(annotationName.lastIndexOf(".")+1);
+			this.fqnOrNull = annotationName;
+		} else {
+			this.annotationName = annotationName;
+			this.fqnOrNull = null;
+		}
 	}
-	/*public Class<? extends Annotation> getType() {
-		return type;
+	
+	@Override
+	public JAnnotation clone() {
+		JAnnotation out = copy();
+		out.setEntries(this.getEntries().stream().map(a -> a.clone()).collect(Collectors.toList()));
+		return out;
 	}
-	public void setType(Class<? extends Annotation> type) {
-		this.type = type;
-	}*/
+	@Override
+	public JAnnotation copy() {
+		return new JAnnotation(this);	
+	}
 
 }

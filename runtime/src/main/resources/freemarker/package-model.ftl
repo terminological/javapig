@@ -51,7 +51,7 @@ public class ${classname} {
 		// ===========================
 		
 		public final static java.lang.String FQN = "${fqn}";
-		<#list class.getMethods() as method>
+		<#list class.getExtendedMethods() as method>
 		public final static java.lang.String ${method.getName().getter()} = "${fqn}#${method.getName().getter()}";
 		</#list>
 		
@@ -59,9 +59,9 @@ public class ${classname} {
 		// ==============
 		
 		<#list class.getMethods() as method>
-		<#assign cn>${method.getName().className()}</#assign>
+		<#assign cn>${method.getName().getClassName()}</#assign>
 		@Generated({"uk.co.terminological.javapig.JModelWriter"})
-		public static class ${cn} implements MirrorField<${method.getInterfaceTypeFQN()}> {
+		public static class ${cn} implements MirrorField<${method.getBoxedTypeFQN()}> {
 			
 			${fqn} mirror = null;
 			
@@ -73,11 +73,11 @@ public class ${classname} {
 				return out;
 			}
 			
-			public ${method.getInterfaceTypeFQN()} get() {
+			public ${method.getBoxedTypeFQN()} get() {
 				return mirror.${method.getName().getter()}();
 			}
 			
-			public void set(${method.getInterfaceTypeFQN()} value) throws UnsupportedOperationException {
+			public void set(${method.getBoxedTypeFQN()} value) throws UnsupportedOperationException {
 				try {
 					((${fqn}Fluent) mirror).${method.getName().setter()}(value);
 				} catch (ClassCastException e) {

@@ -28,7 +28,7 @@ import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.co.terminological.javapig.javamodel.JModel;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.scanner.QDoxJModelBuilder;
 
 @Mojo( name = "javaGenerator", defaultPhase = LifecyclePhase.GENERATE_SOURCES )
@@ -38,7 +38,7 @@ public class JModelMojo extends AbstractMojo {
 	//static String SEP = File.separator;
 
 	@Parameter(required=true)
-	File sourceCodeDirectory;
+	File[] sources;
 
 	@Parameter(required=true)
 	File targetDirectory;
@@ -62,7 +62,7 @@ public class JModelMojo extends AbstractMojo {
 				// This should work but any interdependencies between the source and the
 				// generated code will not be identified.
 				System.out.println("First pass - scanning source code");
-				JModel model = QDoxJModelBuilder.scanModel(sourceCodeDirectory, targetDirectory);
+				JProject model = QDoxJModelBuilder.scanModel(sources, targetDirectory);
 				JModelWriter writer = new JModelWriter();
 				writer.setTargetDirectory(targetDirectory);
 				writer.setModel(model);
@@ -91,7 +91,7 @@ public class JModelMojo extends AbstractMojo {
 				// the second pass should deal with dependencies between the source and the
 				// generated code.	
 				System.out.println("Second pass - scanning source code");
-				JModel model = QDoxJModelBuilder.scanModel(sourceCodeDirectory, targetDirectory);
+				JProject model = QDoxJModelBuilder.scanModel(sources, targetDirectory);
 				JModelWriter writer = new JModelWriter();
 				writer.setTargetDirectory(targetDirectory);
 				writer.setModel(model);

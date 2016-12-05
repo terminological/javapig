@@ -3,7 +3,6 @@ classname: ${classname}
 packagename: ${packagename}
 rootPackage: ${rootPackage}
 model:
-	.getRootPackage(): ${model.getRootPackage()}
 	.isEnabled("VISITOR"): ${model.isEnabled("VISITOR")?then("true","false")}
 	.getImports():
 	<#list model.getImports() as import>
@@ -14,17 +13,13 @@ model:
 		.getName(): ${package.getName()}
 <@printElement package 2/>
 		.getMetadata(): 
-			.getDirectory(): ${package.getMetadata().getDirectory()} 
-			.getTemplates(): 
-		<#list package.getMetadata().getTemplates() as template>
-				.getScope(): ${template.getScope()}
-				.getTemplateFilename(): ${template.getTemplateFilename()}
-				.getClassNameTemplate(): ${template.getClassNameTemplate()}
-				.getExtension(): ${template.getExtension()}
-		</#list> 
-			.getBuiltIn():
-		<#list package.getMetadata().getBuiltIn() as builtin>
+			.getBuiltIns():
+		<#list package.getMetadata().getBuiltIns() as builtin>
 				.toString(): ${builtin.toString()}
+		</#list>
+			.getPlugIns():
+		<#list package.getMetadata().getPlugIns() as plugin>
+				.toString(): ${plugin}
 		</#list>
 			.isEnabled("FACTORY"): ${package.getMetadata().isEnabled("FACTORY")?then("true","false")}
 		<#list package.getClasses() as class>
@@ -53,9 +48,11 @@ model:
 				.getUnderlyingType():
 <@printClassName method.getUnderlyingType()!"none" 5/>
 				.getInterfaceType(): ${method.getInterfaceType()}
-				.getInterfaceTypeFQN(): ${method.getInterfaceType()} 
+				.getInterfaceTypeFQN(): ${method.getInterfaceTypeFQN()} 
 				.getImplementationType(): ${method.getImplementationType()}
+				.getDeclaringClass().getName().getSimpleName(): ${method.getDeclaringClass().getName().getSimpleName()} 
 				.isDefault(): ${method.isDefault()?then("true","false")}
+				.isEnum(): ${method.isEnum()?then("true","false")}
 				.isPrimitive(): ${method.isPrimitive()?then("true","false")}
 				.isArray(): ${method.isArray()?then("true","false")}
 				.isParameterised(): ${method.isParameterised()?then("true","false")}
@@ -89,7 +86,12 @@ model:
 
 <#macro printAnnotation annotation indent>
 <#list 1..indent as i>    </#list>.getName(): ${annotation.getName()}
-<#list annotation.getValues() as annotationEntry>
+<#list 1..indent as i>    </#list>.getImports():
+<#list annotation.getImports() as import>
+<#list 1..indent as i>    </#list>    ${import}
+</#list>
+<#list 1..indent as i>    </#list>.getCanonicalName(): ${annotation.getCanonicalName()}
+<#list annotation.getEntries() as annotationEntry>
 <@printAnnotationEntry annotationEntry indent+1/>
 </#list>
 </#macro>
@@ -130,7 +132,7 @@ model:
 <#list 1..indent as i>    </#list>.setter(): ${methodName.setter()}
 <#list 1..indent as i>    </#list>.adder(): ${methodName.adder()}
 <#list 1..indent as i>    </#list>.addAll(): ${methodName.addAll()}
-<#list 1..indent as i>    </#list>.className(): ${methodName.className()}
+<#list 1..indent as i>    </#list>.className(): ${methodName.getClassName()}
 <#list 1..indent as i>    </#list>.code(): ${methodName.code()}
 <#list 1..indent as i>    </#list>.constant(): ${methodName.constant()}
 <#list 1..indent as i>    </#list>.methodBase(): ${methodName.methodBase()}

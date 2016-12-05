@@ -2,96 +2,106 @@ package uk.co.terminological.javapig.annotations;
 
 import java.io.Serializable;
 
+import uk.co.terminological.javapig.javamodel.Project;
 import uk.co.terminological.javapig.javamodel.JModelAdaptor;
-import uk.co.terminological.javapig.javamodel.NoOp;
+import uk.co.terminological.javapig.javamodel.JTemplateInput;
 
-public enum BuiltIn implements Serializable {
+public enum BuiltIn implements Serializable, JModelAdaptor {
 
 	FLUENT (
 			Scope.INTERFACE, 
 			"fluent-interface.ftl", 
 			"${classFQN}Fluent", 
-			"java", 
-			NoOp.class.getCanonicalName()),
+			"java"),
 	IMPL (
 			Scope.INTERFACE, 
 			"implementation-class.ftl", 
 			"${classFQN}Impl", 
-			"java",
-			NoOp.class.getCanonicalName()),
+			"java"),
 	FLUENT_IMPL (
 			Scope.INTERFACE, 
 			"fluent-implementation-class.ftl", 
 			"${classFQN}FluentImpl", 
-			"java",
-			NoOp.class.getCanonicalName()),
+			"java"),
 	MIRROR (
 			Scope.MODEL, 
 			"package-model.ftl", 
 			"${rootPackage}.Model", 
-			"java",
-			NoOp.class.getCanonicalName()),
+			"java"),
 	VISITOR (
 			Scope.MODEL, 
 			"visitor-model.ftl", 
 			"${rootPackage}.Visitor", 
-			"java",
-			NoOp.class.getCanonicalName()),
+			"java"),
 	FACTORY (
 			Scope.MODEL, 
 			"factory-model.ftl", 
 			"${rootPackage}.Factory", 
-			"java",
-			NoOp.class.getCanonicalName()),
+			"java"),
 	DOTUML (
 			Scope.MODEL, 
 			"dot-uml-model.ftl", 
 			"${rootPackage}.uml", 
-			"dot",
-			NoOp.class.getCanonicalName()),
+			"dot"),
 	DEBUG (
 			Scope.MODEL, 
 			"debug-model.ftl", 
 			"${rootPackage}.debug", 
-			"txt",
-			NoOp.class.getCanonicalName());
+			"txt")
+	;
 	
 	private Scope[] scope;
 	private String filename;
 	private String classnameTemplate;
 	private String extension;
-	private String writerClass;
 	
-	private BuiltIn(Scope scope, String filename, String classnameTemplate, String extension, String writerClass) {
+	
+	private BuiltIn(Scope scope, String filename, String classnameTemplate, String extension) {
 		this.scope = new Scope[] {scope};
 		this.filename = filename;
 		this.classnameTemplate = classnameTemplate;
 		this.extension = extension;
-		this.writerClass = writerClass;
 	}
 
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.annotations.JWriteSpecification#getScope()
+	 */
+	@Override
 	public Scope[] getScope() {
 		return scope;
 	}
 
-	public String getFilename() {
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.annotations.JWriteSpecification#getFilename()
+	 */
+	@Override
+	public String getTemplateFilename() {
 		return filename;
 	}
 
-	public String getClassnameTemplate() {
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.annotations.JWriteSpecification#getClassnameTemplate()
+	 */
+	@Override
+	public String getClassNameTemplate() {
 		return classnameTemplate;
 	}
 	
+	/* (non-Javadoc)
+	 * @see uk.co.terminological.javapig.annotations.JWriteSpecification#getExtension()
+	 */
+	@Override
 	public String getExtension() {
 		return extension;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public <X> JModelAdaptor<X> getAdaptor(Class<X> input) {
-		try {
-			return (JModelAdaptor<X>) Class.forName(writerClass).newInstance();
-		} catch (ClassNotFoundException | ClassCastException | InstantiationException | IllegalAccessException e) {
-			throw new RuntimeException(e);
-		}
+	@Override
+	public Project adapt(Project model) {
+		return model;
+	}
+
+	@Override
+	public boolean filter(JTemplateInput input) {
+		return true;
 	}
 }

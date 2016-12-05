@@ -10,6 +10,12 @@
 			<artifactId>runtime</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>uk.co.terminological.javapig</groupId>
+			<artifactId>plugin</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<scope>provided</scope>
+		</dependency>
 		<!-- <dependency>
 			<groupId>uk.co.terminological.javapig</groupId>
 			<artifactId>generator</artifactId>
@@ -31,12 +37,34 @@
 					<generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>-->
 				</configuration>
 			</plugin>
-			<plugin> <groupId>uk.co.terminological.javapig</groupId> <artifactId>generator</artifactId> 
-				<version>1.0.0-SNAPSHOT</version> <executions> <execution> <id>build-java-resources</id> 
-				<phase>generate-sources</phase> <goals> <goal>javaGenerator</goal> </goals> 
-				</execution> </executions> <configuration> <sourceCodeDirectory>src/main/java/uk/co/terminological/javapig/test/model</sourceCodeDirectory> 
-				<targetDirectory>${project.build.directory}/generated-sources/annotations</targetDirectory> 
-				</configuration> </plugin>
+			<plugin> 
+				<groupId>uk.co.terminological.javapig</groupId> 
+				<artifactId>generator</artifactId> 
+				<version>1.0.0-SNAPSHOT</version> 
+				<executions> 
+					<execution> 
+						<id>build-java-resources</id> 
+						<phase>generate-sources</phase> 
+						<goals> 
+							<goal>javaGenerator</goal> 
+						</goals> 
+					</execution> 
+				</executions> 
+				<configuration> 
+					<sources>
+						<source>src/main/java/uk/co/terminological/javapig/test/model</source>
+						<source>src/main/java/uk/co/terminological/readv2</source>
+					</sources> 
+					<targetDirectory>${project.build.directory}/generated-sources/annotations</targetDirectory> 
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>uk.co.terminological.javapig</groupId>
+						<artifactId>plugin</artifactId>
+						<version>0.0.1-SNAPSHOT</version>
+					</dependency>
+				</dependencies> 
+			</plugin>
 		</plugins>
 	</build>
 </project>
