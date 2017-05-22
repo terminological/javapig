@@ -31,13 +31,22 @@ public class DelimitedParser {
 	StateMachine machine;
 	Reader reader;
 	static Logger log = LoggerFactory.getLogger(DelimitedParser.class);
+	
+
+	public static DelimitedParser enclosedWindowsCsv(Reader in) {
+		return new DelimitedParser(in,",","\r\n","\"","\"",true);
+	}
 
 	public static DelimitedParser windowsCsv(Reader in) {
 		return new DelimitedParser(in,",","\r\n","\"","\"",false);
 	}
-
+	
 	public static DelimitedParser csv(Reader in) {
 		return new DelimitedParser(in,",","\n","\"","\"",false);
+	}
+	
+	public static DelimitedParser enclosedCsv(Reader in) {
+		return new DelimitedParser(in,",","\n","\"","\"",true);
 	}
 
 	public static DelimitedParser windowsTsv(Reader in) {
@@ -67,9 +76,8 @@ public class DelimitedParser {
 		this.reader = reader;
 		this.lex = new Tokeniser(sep,term);
 		// No enclosures
-		this.machine = StateMachine
+		this.machine = StateMachine	
 				.inState(State.LINE_TERMINATED)
-
 				.withTransition(State.FIELD_TERMINATED, t->t.matched(sep), State.FIELD_TERMINATED)
 				.withTransition(State.FIELD_TERMINATED, t->t.matched(term), State.LINE_TERMINATED)
 				.withTransition(State.FIELD_TERMINATED, t->t instanceof EOF, State.LINE_TERMINATED)
@@ -123,16 +131,22 @@ public class DelimitedParser {
 					.withTransition(State.FIELD_TERMINATED, t->(!(t instanceof EOF) && !t.matched(enc) && !t.matched(sep) && !t.matched(term) && !t.matched(escape)), State.READING_UNENCLOSED)
 
 					.withTransition(State.READING_UNENCLOSED, t->t.matched(sep), State.FIELD_TERMINATED)
-					.withTransition(State.READING_UNENCLOSED, t->t.matched(term), State.LINE_TERMINATED)
-					.withTransition(State.READING_UNENCLOSED, t->(!t.matched(sep) && !t.matched(term) && !t.matched(escape)), State.READING_UNENCLOSED)
+					.withTransition(State.READING_UNENCLOSED, t->t.matched(term) || t instanceof EOF, State.LINE_TERMINATED)
+					.withTransition(State.READING_UNENCLOSED, t->(!t.matched(sep) && !t.matched(term) && !(t instanceof EOF)), State.READING_UNENCLOSED)
 
+					.withTransition(State.ENCLOSING_FIELD, t->(t.matched(escape) && t.matched(enc)), State.ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD) 
 					.withTransition(State.ENCLOSING_FIELD, t->t.matched(escape), State.ESCAPING_ENCLOSED)
 					.withTransition(State.ENCLOSING_FIELD, t->!t.matched(escape), State.READING_ENCLOSED)
 
+					.withTransition(State.READING_ENCLOSED, t->(t.matched(escape) && t.matched(enc)), State.ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD) 
 					.withTransition(State.READING_ENCLOSED, t->t.matched(escape), State.ESCAPING_ENCLOSED)
 					.withTransition(State.READING_ENCLOSED, t->t.matched(enc), State.UNENCLOSING_FIELD)
 					.withTransition(State.READING_ENCLOSED, t->(!t.matched(enc) && !t.matched(escape)), State.READING_ENCLOSED)
 
+					.withTransition(State.ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD, t->(t.matched(enc) || t.matched(escape)), State.READING_ENCLOSED)
+					.withTransition(State.ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD, t->t.matched(sep), State.FIELD_TERMINATED)
+					.withTransition(State.ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD, t->t.matched(term), State.LINE_TERMINATED)
+					
 					.withTransition(State.ESCAPING_ENCLOSED, t->true, State.READING_ENCLOSED)
 
 					.withTransition(State.UNENCLOSING_FIELD, t->t.matched(term), State.LINE_TERMINATED)
@@ -186,32 +200,38 @@ public class DelimitedParser {
 	public List<String> readLine() throws EOFException, MalformedCSVException {
 		Iterator<Token> tokenProvider = lex.tokenise(reader);
 		StringBuilder out = new StringBuilder();
+		StringBuilder debug = new StringBuilder();
 		ArrayList<String> out2 = new ArrayList<>();
-		while(true) {
-			Token token = tokenProvider.next();
-			State start = machine.current;
-			State result = machine.execute(token);
-			log.debug("token: "+token+": transition: "+start+"->"+result);
-			switch (result) {
-			case READING_ENCLOSED:
-			case READING_UNENCLOSED:
-				out.append(token.get());
-				break;
-			case FIELD_TERMINATED:
-				log.debug("new field: "+out.toString());
-				out2.add(out.toString());
-				out = new StringBuilder();
-				break;
-			case LINE_TERMINATED:
-				out2.add(out.toString());
-				log.debug("new field: "+out.toString());
-				log.debug("completed line");
-				return out2;
-			case FILE_TERMINATED:
-				throw new EOFException();
-			default:
-				break;
-			};
+		try {
+			while(true) {
+				Token token = tokenProvider.next();
+				State start = machine.current;
+				State result = machine.execute(token);
+				debug.append(token.get());
+				log.trace("token: "+token+": transition: "+start+"->"+result);
+				switch (result) {
+				case FIELD_TERMINATED:
+					log.trace("new field: "+out.toString());
+					out2.add(out.toString());
+					out = new StringBuilder();
+					break;
+				case LINE_TERMINATED:
+					log.trace("new field: "+out.toString());
+					out2.add(out.toString());
+					log.debug("parsed line: ["+String.join("] [", out2)+"]");
+					return out2;
+				case FILE_TERMINATED:
+					throw new EOFException();
+				case READING_ENCLOSED:
+				case READING_UNENCLOSED:
+					out.append(token.get());
+				default:
+					if (token instanceof EOF) throw new MalformedCSVException(start, token);
+					break;
+				};
+			}
+		} catch (MalformedCSVException e) {
+			throw new MalformedCSVException(debug.toString(), e);
 		}
 	}
 	
@@ -285,7 +305,8 @@ public class DelimitedParser {
 		READING_UNENCLOSED,
 		FIELD_TERMINATED,
 		LINE_TERMINATED,
-		FILE_TERMINATED;
+		FILE_TERMINATED, 
+		ESCAPING_ENCLOSED_OR_UNENCLOSING_FIELD;
 	}
 
 	private static class Transition {
@@ -309,6 +330,10 @@ public class DelimitedParser {
 	public static class MalformedCSVException extends Exception {
 		public MalformedCSVException(State s, Token t) {
 			super("State "+s+" cannot be followed by a "+t.toString());
+		}
+
+		public MalformedCSVException(String string, MalformedCSVException e) {
+			super("CSV format error: "+string,e);
 		}
 	}
 	

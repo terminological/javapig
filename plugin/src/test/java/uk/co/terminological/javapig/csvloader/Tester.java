@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.MDC;
 
 import uk.co.terminological.javapig.csvloader.DelimitedParser.EOFException;
 import uk.co.terminological.javapig.csvloader.DelimitedParser.MalformedCSVException;
@@ -22,7 +23,7 @@ public class Tester {
 		BasicConfigurator.configure();
 		InputStream is = Tester.class.getResourceAsStream("/csv1.csv");
 		Reader in = new InputStreamReader(is,"UTF-8");
-		DelimitedParser util = new DelimitedParser(in, "\"", ",", "\n", "\\");
+		DelimitedParser util = DelimitedParser.csv(in);
 		try {
 			while(true) {
 				util.readLine().stream().forEach(System.out::println);

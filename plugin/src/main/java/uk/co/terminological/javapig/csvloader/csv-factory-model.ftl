@@ -67,7 +67,11 @@ public class ${classname} {
 				DelimitedParser parser = ${class.getParser("reader")};
 				return IterableMapper.create(
 						parser.readLines(),
-						al -> (${sn}) new ${sn}Csv(al))
+						al ->  {
+							${sn} tmp = new ${sn}Csv(al);
+							Indexes.get().index(tmp);
+							return tmp;
+						})
 					.iterator();
 			} catch (IOException e) {
 				// the IOException has been checked in the constructor. This should never be thrown.

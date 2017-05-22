@@ -1,17 +1,16 @@
 package uk.co.terminological.readv2;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
+import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
 import uk.co.terminological.javapig.csvloader.Type;
 import uk.co.terminological.javapig.index.Searchable;
 import uk.co.terminological.javapig.index.Secondary;
-import uk.co.terminological.javapig.csvloader.ByField;
 
 @Csv(Type.WIN_CSV)
 public interface ReadV2Core {
@@ -30,7 +29,7 @@ public interface ReadV2Core {
 	@ByField(10) public int getStatusFlag();
 	@ByField(11) public String getLanguageCode();
 	
-	@OneToMany public List<ReadV2Key> getKeys();
+	@OneToMany public Set<ReadV2Key> getKeys();
 	
 	public default boolean isCurrent() {return getStatusFlag()==0;}
 	public default boolean isDiscontinued() {return getStatusFlag()==1;}
@@ -48,5 +47,7 @@ public interface ReadV2Core {
 	public default Set<ReadV2Core> getChildren() {
 		return Indexes.get().findReadV2CoreByParentCode(this.getReadCode());
 	}
+
+	public default String print() {return getReadCode()+"|"+getPrefTerm30();}
 	
 }

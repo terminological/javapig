@@ -1,3 +1,4 @@
 an,example csv,file,
 from ,Libre-Office,that,“contains”
 escaped,"characters,",,
+and,"some ""using csv default escaping""",with double quotes

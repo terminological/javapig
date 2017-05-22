@@ -42,12 +42,16 @@ public class CsvInterface extends IndexableInterface {
 		switch (type) {
 		case WIN_CSV:
 			return "DelimitedParser.windowsCsv("+readerVar+")";
+		case WIN_CSV_ENC:
+			return "DelimitedParser.enclosedWindowsCsv("+readerVar+")";
 		case WIN_TSV:
 			return "DelimitedParser.windowsTsv("+readerVar+")";
 		case WIN_PIPE_DELIM:
 			return "DelimitedParser.windowsPipe("+readerVar+")";
 		case CSV:
 			return "DelimitedParser.csv("+readerVar+")";
+		case CSV_ENC:
+			return "DelimitedParser.enclosedCsv("+readerVar+")";
 		case TSV:
 			return "DelimitedParser.tsv("+readerVar+")";
 		case PIPE_DELIM:

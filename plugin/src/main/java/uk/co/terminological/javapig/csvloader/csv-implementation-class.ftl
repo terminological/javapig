@@ -35,13 +35,21 @@ public class ${classname} implements ${sn} {
 			<#if method.isOptional()>
 		${method.getUnderlyingType().getSimpleName()} tmp = <@d.mapByType "csvField" method.getUnderlyingType().getCanonicalName()/>;
 		return Optional.ofNullable(tmp);
+			<#elseif method.returnTypeIsIndexed()>
+		<#-- ${method.indexedReturnKeyType().getSimpleName()} key = <@d.mapByType "csvField" method.indexedReturnKeyType().getCanonicalName()/>;-->
+		return Indexes.get().${method.inverseIndexFinder()}(this).orElse(null);
 			<#else>
 		${method.getInterfaceType()} tmp = <@d.mapByType "csvField" method.getInterfaceTypeFQN()/>;
 		return tmp;
 			</#if>
 		<#else>
+			<#if method.returnTypeIsIndexed()>
+		//Looking for an index entry using this as a key
+		return Indexes.get().${method.inverseIndexFinder()}(this).orElse(null);
+			<#else>
 		//FIXME
 		return null;
+			</#if>
 		</#if>
 	}
 	</#list> 

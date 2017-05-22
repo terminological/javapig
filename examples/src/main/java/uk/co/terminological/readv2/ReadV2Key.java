@@ -9,6 +9,7 @@ import uk.co.terminological.javapig.annotations.Inverse;
 import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
 import uk.co.terminological.javapig.csvloader.Type;
+import uk.co.terminological.javapig.index.Secondary;
 
 @Csv(Type.WIN_CSV)
 public interface ReadV2Key {
@@ -20,14 +21,13 @@ public interface ReadV2Key {
 	@ByField(4) public Optional<String> getTerm198();
 	@ByField(5) public String getTermCode();
 	@ByField(6) public String getLanguageCode();
-	@ManyToOne  
-	@Inverse("uk.co.terminological.readv2.ReadV2Core#getKeys") 
-	@ByField(7) public ReadV2Core getReadCode();
+	@Secondary @ByField(7) public ReadV2Core getReadCode();
+	@ByField(7) public String getReadCodeValue();
 	@ByField(8) public String getStatusFlag();
 	
 	@Id 
 	default String getUniqueId() {
-		return getReadCode()+"-"+getTermCode();
+		return getReadCodeValue()+"-"+getTermCode();
 	}
 	
 	default boolean isPreferredTerm() {
@@ -41,4 +41,6 @@ public interface ReadV2Key {
 	default boolean isUserDefined() {
 		return getTermCode().startsWith("z");
 	}
+	
+	public default String print() {return getUniqueId()+"|"+getTerm30()+"|"+getReadCode().getPrefTerm30();}
 }
