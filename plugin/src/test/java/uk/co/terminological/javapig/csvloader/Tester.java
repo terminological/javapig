@@ -8,8 +8,9 @@ import java.io.Reader;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.MDC;
 
-import uk.co.terminological.javapig.csvloader.DelimitedParser.EOFException;
-import uk.co.terminological.javapig.csvloader.DelimitedParser.MalformedCSVException;
+import uk.co.terminological.datatypes.DelimitedParser;
+import uk.co.terminological.datatypes.DelimitedParser.EOFException;
+import uk.co.terminological.datatypes.DelimitedParser.MalformedCSVException;
 
 public class Tester {
 

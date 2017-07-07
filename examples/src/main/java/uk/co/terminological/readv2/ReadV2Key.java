@@ -5,10 +5,10 @@ import java.util.Optional;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 
+import uk.co.terminological.datatypes.Type;
 import uk.co.terminological.javapig.annotations.Inverse;
 import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
-import uk.co.terminological.javapig.csvloader.Type;
 import uk.co.terminological.javapig.index.Secondary;
 
 @Csv(Type.WIN_CSV)

@@ -37,5 +37,10 @@
 			<version>1.7.7</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>uk.co.terminological</groupId>
+			<artifactId>exotic-datatypes</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 </project>

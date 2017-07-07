@@ -6,9 +6,9 @@ import java.util.Set;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
+import uk.co.terminological.datatypes.Type;
 import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
-import uk.co.terminological.javapig.csvloader.Type;
 import uk.co.terminological.javapig.index.Searchable;
 import uk.co.terminological.javapig.index.Secondary;
 
