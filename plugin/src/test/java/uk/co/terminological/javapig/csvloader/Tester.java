@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 
 import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.MDC;
 
 import uk.co.terminological.datatypes.DelimitedParser;
 import uk.co.terminological.datatypes.DelimitedParser.EOFException;
