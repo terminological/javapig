@@ -2,7 +2,10 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-import uk.co.terminological.javapig.csvloader.DelimitedParser;
+import uk.co.terminological.parser.DelimitedParserBuilder;
+import uk.co.terminological.parser.StateMachineException;
+import uk.co.terminological.datatypes.IterableMapper;
+import uk.co.terminological.datatypes.Deferred;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -10,7 +13,7 @@ import java.nio.file.Path;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.*;
-import uk.co.terminological.javapig.csvloader.IterableMapper;
+
 
 <#list model.getClasses() as class>
 import ${class.getName().getCanonicalName()};
@@ -64,15 +67,18 @@ public class ${classname} {
 			Reader reader;
 			try {
 				reader = Files.newBufferedReader(in, cs);
-				DelimitedParser parser = ${class.getParser("reader")};
+				Iterable<Deferred<List<String>,StateMachineException>> output = ${class.getParser("reader")};
 				return IterableMapper.create(
-						parser.readLines(),
+						output,
 						al ->  {
-							${sn} tmp = new ${sn}Csv(al);
-							Indexes.get().index(tmp);
-							return tmp;
-						})
-					.iterator();
+							try {
+								${sn} tmp = new ${sn}Csv(al.get());
+								Indexes.get().index(tmp);
+								return tmp;
+							} catch (Exception e) {
+								throw new RuntimeException(e);
+							}
+						}).iterator();
 			} catch (IOException e) {
 				// the IOException has been checked in the constructor. This should never be thrown.
 				throw new RuntimeException(e);

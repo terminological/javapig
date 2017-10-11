@@ -6,13 +6,13 @@ import java.util.Set;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
-import uk.co.terminological.datatypes.Type;
 import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
+import uk.co.terminological.javapig.csvloader.Type;
 import uk.co.terminological.javapig.index.Searchable;
 import uk.co.terminological.javapig.index.Secondary;
 
-@Csv(Type.WIN_CSV)
+@Csv(Type.CSV)
 public interface ReadV2Core {
 	
 	@Id @ByField(0) public String getReadCode();

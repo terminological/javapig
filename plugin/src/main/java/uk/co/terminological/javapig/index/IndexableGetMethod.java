@@ -61,10 +61,16 @@ public class IndexableGetMethod extends JGetMethod {
 		return indexedReturnType().getIdentifier().getReturnType();
 	}
 	
+	/** 
+	 * If a method returns a value which itself indexed
+	 * @return
+	 */
 	public String inverseIndexFinder() {
 		//FIXME this is a single case where we are referencing by primary index.
 		// return ((IndexableGetMethod) indexedReturnType().getIdentifier()).indexFinder();
-		return "find"+this.indexedReturnType().getName().getSimpleName()+"By"+this.indexedReturnKeyType().getSimpleName();
+		return "find"+this.indexedReturnType().getName().getSimpleName()+"By"
+			+((IndexableInterface) this.getDeclaringClass()).getIdentifier().getName().getClassName();
+		//this.indexedReturnKeyType().getSimpleName();
 	}
 	
 	public boolean returnTypeIsIndexed() {

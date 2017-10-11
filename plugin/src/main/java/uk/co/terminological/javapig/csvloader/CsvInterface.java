@@ -40,30 +40,23 @@ public class CsvInterface extends IndexableInterface {
 		boolean mandatoryEnclosed = this.getAnnotation(Csv.class).alwaysEnclosed();
 		
 		switch (type) {
-		case WIN_CSV:
-			return "DelimitedParser.windowsCsv("+readerVar+")";
-		case WIN_CSV_ENC:
-			return "DelimitedParser.enclosedWindowsCsv("+readerVar+")";
-		case WIN_TSV:
-			return "DelimitedParser.windowsTsv("+readerVar+")";
-		case WIN_PIPE_DELIM:
-			return "DelimitedParser.windowsPipe("+readerVar+")";
 		case CSV:
-			return "DelimitedParser.csv("+readerVar+")";
-		case CSV_ENC:
-			return "DelimitedParser.enclosedCsv("+readerVar+")";
+			return "DelimitedParserBuilder.excelCsv("+readerVar+")";
 		case TSV:
-			return "DelimitedParser.tsv("+readerVar+")";
+			return "DelimitedParserBuilder.tsv("+readerVar+")";
 		case PIPE_DELIM:
-			return "DelimitedParser.pipe("+readerVar+")";
+			return "DelimitedParserBuilder.pipe("+readerVar+")";
+		case MYSQL:
+			return "DelimitedParserBuilder.mysql("+readerVar+")";
 		default:
-			return "new DelimitedParser("+
-				readerVar+","+
+			return "DelimitedParserBuilder.machine("+
 				SourceCode.string(sep)+","+
-				SourceCode.string(term)+","+
 				SourceCode.string(enc)+","+
-				SourceCode.string(esc)+","+
-				SourceCode.bool(mandatoryEnclosed)+")";
+				SourceCode.string(esc)+")"+
+				".lineEnding("+SourceCode.string(term)+")"+
+				(mandatoryEnclosed ? ".mandatoryEnclosure()" : "")+
+				".build("+readerVar+")"
+				;
 		}
 		
 	}

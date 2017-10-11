@@ -45,7 +45,7 @@ public class ${classname} implements ${sn} {
 		<#else>
 			<#if method.returnTypeIsIndexed()>
 		//Looking for an index entry using this as a key
-		return Indexes.get().${method.inverseIndexFinder()}(this).orElse(null);
+		return Indexes.get().${method.inverseIndexFinder()}(this);
 			<#else>
 		//FIXME
 		return null;
