@@ -7,7 +7,6 @@ import java.io.Reader;
 import java.util.List;
 
 import org.apache.log4j.BasicConfigurator;
-
 import uk.co.terminological.datatypes.Deferred;
 import uk.co.terminological.parser.DelimitedParserBuilder;
 import uk.co.terminological.parser.StateMachineException;

@@ -91,7 +91,6 @@ public class ${classname} implements Serializable {
 			}
 			</#if>
 		</#if>
-		
 		}
 	</#list>
 	}
@@ -174,15 +173,29 @@ public class ${classname} implements Serializable {
 	</#list>
 	<#list class.getSecondaryIndexes() as method>
 		{
-			//Secondary index - ${class.getName().getSimpleName()} by ${method.getName().getter()}
-		<#if method.isOptional()>
-			Optional<${method.keyType()}> key = value.${method.getName().getter()}();
-			if (key.isPresent() && ${method.indexField()}.get(key.get()) != null) 
-				${method.indexField()}.get(key.get()).remove(value);
-		<#else>
-			${method.keyType()} key = value.${method.getName().getter()}();
-			if (key != null && ${method.indexField()}.get(key) != null) 
+		<#if method.returnTypeIsIndexed()>
+			//indexed return type: ${method.keyType()} 
+			${method.indexedReturnKeyType().getSimpleName()} key = value.${method.getName().getter()}().${method.indexedReturnType().getIdentifier().getName().getter()}();
+			if (key != null) {
+				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
 				${method.indexField()}.get(key).remove(value);
+			}
+			<#-- support for optionals here? -->
+		<#else>
+			//simple return type: ${method.keyType()}
+			<#if method.isOptional()>
+			Optional<${method.keyType()}> key = value.${method.getName().getter()}();
+			if (key.isPresent()) {
+				if (${method.indexField()}.get(key.get()) == null) ${method.indexField()}.put(key.get(), new HashSet<>());
+				${method.indexField()}.get(key.get()).remove(value);
+			}
+			<#else>
+			${method.keyType()} key = value.${method.getName().getter()}();
+			if (key != null) {
+				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
+				${method.indexField()}.get(key).remove(value);
+			}
+			</#if>
 		</#if>
 		}
 	</#list>

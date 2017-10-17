@@ -36,8 +36,8 @@ public class ${classname} implements ${sn} {
 		${method.getUnderlyingType().getSimpleName()} tmp = <@d.mapByType "csvField" method.getUnderlyingType().getCanonicalName()/>;
 		return Optional.ofNullable(tmp);
 			<#elseif method.returnTypeIsIndexed()>
-		<#-- ${method.indexedReturnKeyType().getSimpleName()} key = <@d.mapByType "csvField" method.indexedReturnKeyType().getCanonicalName()/>;-->
-		return Indexes.get().${method.inverseIndexFinder()}(this).orElse(null);
+		${method.indexedReturnKeyType().getSimpleName()} key = <@d.mapByType "csvField" method.indexedReturnKeyType().getCanonicalName()/>;
+		return Indexes.get().${method.indexedReturnType().getIdentifier().indexFinder()}(key).orElse(null);
 			<#else>
 		${method.getInterfaceType()} tmp = <@d.mapByType "csvField" method.getInterfaceTypeFQN()/>;
 		return tmp;

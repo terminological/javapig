@@ -5,6 +5,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import org.apache.log4j.BasicConfigurator;
+
 import uk.co.terminological.readv2.CsvFactory;
 import uk.co.terminological.readv2.Indexes;
 import uk.co.terminological.readv2.ReadV2Core;
@@ -16,10 +18,11 @@ public class TestReadV2Load {
 		
 	}
 	
-	static Path core =  FileSystems.getDefault().getPath("/home/terminological/Data/TRUD/nhs_readv2_21.0.0_20160401000001/V2/Unified/Corev2.all");
-	static Path key =  FileSystems.getDefault().getPath("/home/terminological/Data/TRUD/nhs_readv2_21.0.0_20160401000001/V2/Unified/Keyv2.all");
+	static Path core =  FileSystems.getDefault().getPath("/media/data/Data/TRUD/nhs_readv2_21.0.0_20160401000001/V2/Unified/Corev2.all");
+	static Path key =  FileSystems.getDefault().getPath("/media/data/Data/TRUD/nhs_readv2_21.0.0_20160401000001/V2/Unified/Keyv2.all");
 	
 	public static void main(String[] args) throws IOException {
+		BasicConfigurator.configure();
 		System.out.println("CORES");
 		for (ReadV2Core coreEntry : CsvFactory.getReadV2Core(core)) {
 			if (coreEntry.getReadCode().equalsIgnoreCase("H33..")) System.out.println(coreEntry.print());
