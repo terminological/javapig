@@ -16,8 +16,7 @@ public class Tester {
 	public Tester() {
 		// TODO Auto-generated constructor stub
 	}
-	
-	
+
 
 	public static void main(String[] args) throws IOException, StateMachineException {
 		BasicConfigurator.configure();
@@ -27,7 +26,7 @@ public class Tester {
 		for (Deferred<List<String>, StateMachineException> item: util) {
 				item.get().forEach(System.out::println);
 				System.out.println("NL");
-		} 
+		}
 		System.out.println("Done");
 		is.close();
 	}
