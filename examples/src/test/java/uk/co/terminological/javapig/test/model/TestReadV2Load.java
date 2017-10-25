@@ -29,7 +29,7 @@ public class TestReadV2Load {
 		}
 		System.out.println("KEYS");
 		for (ReadV2Key keyEntry : CsvFactory.getReadV2Key(key)) {
-			// System.out.println(keyEntry.print());
+			System.out.println(keyEntry.print());
 		}
 		
 		Optional<ReadV2Core> opt = Indexes.get().findReadV2CoreByReadCode("H33..");

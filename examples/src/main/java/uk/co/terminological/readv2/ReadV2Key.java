@@ -3,12 +3,10 @@ package uk.co.terminological.readv2;
 import java.util.Optional;
 
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
 
-import uk.co.terminological.javapig.csvloader.Type;
-import uk.co.terminological.javapig.annotations.Inverse;
 import uk.co.terminological.javapig.csvloader.ByField;
 import uk.co.terminological.javapig.csvloader.Csv;
+import uk.co.terminological.javapig.csvloader.Type;
 import uk.co.terminological.javapig.index.Secondary;
 
 @Csv(Type.CSV)
