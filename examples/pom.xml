@@ -23,33 +23,69 @@
 	</dependencies>
 	<build>
 		<plugins>
-			<plugin> 
-				<groupId>uk.co.terminological.javapig</groupId> 
-				<artifactId>generator</artifactId> 
-				<version>1.0.0-SNAPSHOT</version> 
-				<executions> 
-					<execution> 
-						<id>build-java-resources</id> 
-						<phase>generate-sources</phase> 
-						<goals> 
-							<goal>javaGenerator</goal> 
-						</goals> 
-					</execution> 
-				</executions> 
-				<configuration> 
+			<plugin>
+				<groupId>uk.co.terminological.javapig</groupId>
+				<artifactId>plugin</artifactId>
+				<version>1.0.0</version>
+				<executions>
+					<execution>
+						<id>build-java-from-csv</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>javaFromCsv</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<defaultTargetPackage>uk.co.terminological.mimic2</defaultTargetPackage>
+					<defaultType>CSV</defaultType>
+					<filenameFilter>*.csv</filenameFilter>
+					<baseDirectory>src/test/resources</baseDirectory>
+					<javaFromCsvExecutions>
+						<javaFromCsvExecution>
+							<file>src/test/resources/LABEVENTS_50.csv</file>
+							<type>CSV</type>
+							<targetFQN>uk.co.terminological.mimic.LabEvent</targetFQN>
+						</javaFromCsvExecution>
+						<javaFromCsvExecution>
+							<file>src/test/resources/PATIENTS_50.csv</file>
+							<type>CSV</type>
+							<targetFQN>uk.co.terminological.mimic.Patient</targetFQN>
+						</javaFromCsvExecution>
+					</javaFromCsvExecutions>
+					<targetDirectory>src/test/java</targetDirectory>
+				</configuration>
+				<dependencies>
+					
+				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>uk.co.terminological.javapig</groupId>
+				<artifactId>generator</artifactId>
+				<version>1.0.0</version>
+				<executions>
+					<execution>
+						<id>build-java-resources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>javaGenerator</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
 					<sources>
 						<source>src/main/java/uk/co/terminological/javapig/test/model</source>
 						<source>src/main/java/uk/co/terminological/readv2</source>
-					</sources> 
-					<targetDirectory>${project.build.directory}/generated-sources/annotations</targetDirectory> 
+					</sources>
+					<targetDirectory>${project.build.directory}/generated-sources/annotations</targetDirectory>
 				</configuration>
 				<dependencies>
 					<dependency>
 						<groupId>uk.co.terminological.javapig</groupId>
 						<artifactId>plugin</artifactId>
-						<version>0.0.1-SNAPSHOT</version>
+						<version>1.0.0</version>
 					</dependency>
-				</dependencies> 
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>

@@ -3,9 +3,11 @@ package uk.co.terminological.javapig.javamodel;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 
 import uk.co.terminological.javapig.StringCaster;
 import uk.co.terminological.javapig.javamodel.tools.JNameBuilder;
+import uk.co.terminological.javapig.scanner.ReflectionUtils;
 
 /**
  * represents an annotation in the source code and contains the detail of the 
@@ -47,12 +50,22 @@ public class JAnnotation extends JProjectComponent {
 	 * @return a set of strings representing the FQN of imports for this annotation
 	 */
 	public Set<String> getImports() {
-		Set<String> out = entries.stream()
+		Set<String> refl = new HashSet<>();
+		try {
+			if (fqnOrNull == null) throw new ClassNotFoundException();
+			Class<?> cls = Class.forName(fqnOrNull);
+			@SuppressWarnings("unchecked")
+			Annotation a = convert((Class<Annotation>) cls);
+			refl.addAll(ReflectionUtils.AnnotationImports.scan(a));
+		} catch (Exception e) {
+			//Can occur for many reasons. 
+		}
+		refl.addAll(entries.stream()
 		.flatMap(ae -> ae.getValues().stream())
 		.flatMap(av -> av.getImports().stream())
-		.collect(Collectors.toSet());
-		if (this.fqnOrNull != null) out.add(this.fqnOrNull);
-		return out;
+		.collect(Collectors.toSet()));
+		if (this.fqnOrNull != null) refl.add(this.fqnOrNull);
+		return refl;
 	}
 	
 	private String fqnOrNull;
@@ -74,6 +87,15 @@ public class JAnnotation extends JProjectComponent {
 			.filter(a -> a.getMethod().getter().equals(keyName))
 			.flatMap(a -> a.getValues().stream())
 			.collect(Collectors.toList());
+	}
+	
+	public <T extends Annotation> String toSourceCode() throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		if (fqnOrNull == null) throw new ClassNotFoundException();
+		Class<?> cls = Class.forName(fqnOrNull);
+		@SuppressWarnings("unchecked")
+		Annotation a = convert((Class<T>) cls);
+		// do something with tmp.getImports() if issues from getImports() method above
+		return ReflectionUtils.AnnotationToSource.convert(a);
 	}
 	
 	/**
@@ -111,6 +133,8 @@ public class JAnnotation extends JProjectComponent {
                             return "Proxied annotation of type " + annotationClass;
                         } else if (method.getName().equals("getClass")) {
                             return annotationClass;
+                        } else if (method.getName().equals("annotationType")) {
+                        	return annotationClass;
                         }
                         
                         JMethodName mname = JNameBuilder.from(method);

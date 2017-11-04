@@ -43,6 +43,13 @@ public class JAnnotationValue<T> extends JProjectComponent {
 		
 		//TODO: if this is to be used in source code we need a toString method that gives
 		//a source code friendly representation for each possible type e.g. "A String", 0.2F, etc..
+		
+		//TODO: enums end up here, for complex reasons, depending on the builder that created them
+		//we may or may not know their full type.
+		
+		//in the template environment we want to compare them to their string representation anyway 
+		//so that is an advantage. Outside of the template environment then we can use the 
+		//JAnnotation 
 	}
 	
 	public static class Annotation extends JAnnotationValue<JAnnotation> {

@@ -25,7 +25,7 @@ import javax.tools.StandardLocation;
 import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.scanner.AptJModelBuilder;
 
-@SupportedAnnotationTypes(value= {"uk.co.terminological.javapig.annotations.Model"})
+@SupportedAnnotationTypes(value={"uk.co.terminological.javapig.annotations.Model"})
 @SupportedSourceVersion(RELEASE_8)
 public class JModelProcessor extends AbstractProcessor {
 

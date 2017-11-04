@@ -3,7 +3,7 @@ package ${packagename};
 
 import javax.annotation.Generated;
 import uk.co.terminological.parser.DelimitedParserBuilder;
-import uk.co.terminological.parser.StateMachineException;
+import uk.co.terminological.parser.ParserException;
 import uk.co.terminological.datatypes.IterableMapper;
 import uk.co.terminological.datatypes.Deferred;
 import java.nio.charset.StandardCharsets;
@@ -67,7 +67,7 @@ public class ${classname} {
 			Reader reader;
 			try {
 				reader = Files.newBufferedReader(in, cs);
-				Iterable<Deferred<List<String>,StateMachineException>> output = ${class.getParser("reader")};
+				Iterable<Deferred<List<String>,ParserException>> output = ${class.getParser("reader")};
 				return IterableMapper.create(
 						output,
 						al ->  {

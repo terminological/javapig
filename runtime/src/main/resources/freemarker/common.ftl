@@ -79,13 +79,15 @@ a globally useful feature if annotations are inherited.
 -->
 
 <#macro copyAnnotations classOrMethod indent>
-<#list classOrMethod.getAnnotations() as annotation><@printAnnotation annotation indent/>
+<#list classOrMethod.getAnnotations() as annotation>
+<#list 0..<indent as i>	</#list>${annotation.toSourceCode()}
 </#list>
 </#macro>
 
+<#-- 
 <#macro printAnnotation annotation indent>
-<#list 0..<indent as i>	</#list>@${annotation.getName()}<#if annotation.getValues()?size gt 0>(<#if annotation.getValues()?size gt 1>
-<#list 0..<indent as i>	</#list></#if><#list annotation.getValues() as annotationEntry><@printAnnotationEntry annotationEntry indent+1/><#if !annotationEntry?is_last>,
+<#list 0..<indent as i>	</#list>@${annotation.getName()}<#if annotation.getEntries()?size gt 0>(<#if annotation.getEntries()?size gt 1>
+<#list 0..<indent as i>	</#list></#if><#list annotation.getEntries() as annotationEntry><@printAnnotationEntry annotationEntry indent+1/><#if !annotationEntry?is_last>,
 <#list 0..<indent as i>	</#list></#if></#list>)</#if>
 </#macro>
 
@@ -95,4 +97,4 @@ a globally useful feature if annotations are inherited.
 </#list>}<#else><#if annotationEntry.getValues()?first??><@printAnnotationValue annotationEntry.getValues()?first 0/></#if></#if></#macro>
 
 <#macro printAnnotationValue annotationValue indent><#if annotationValue.isPrimitive()>${annotationValue.getValue()}</#if><#if annotationValue.isClass()>${annotationValue.getValue().getCanonicalName()}.class</#if><#if annotationValue.isAnnotation()><@printAnnotation annotationValue.getValue() indent+1/></#if></#macro>
-
+-->

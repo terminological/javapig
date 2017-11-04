@@ -54,20 +54,28 @@ public class JInterface extends JElement implements JTemplateInput  {
 		for (JGetMethod method: getMethods()) {
 			for (String imp: method.getImports()) { 
 				if (!imp.startsWith("java.lang")) {
-					if (imp.startsWith("java.util")) tmp.add("java.util.*");
-					else tmp.add(imp);
+					//if (imp.startsWith("java.util")) {tmp.add("java.util.*");}
+					tmp.add(imp);
 				}
 			}
 		}
 		for (String imp: additional) { 
 			if (!imp.startsWith("java.lang")) {
-				if (imp.startsWith("java.util")) tmp.add("java.util.*");
-				else tmp.add(imp);
+				// if (imp.startsWith("java.util")) tmp.add("java.util.*");
+				tmp.add(imp);
 			}
 		}
 		return tmp.stream().sorted().collect(Collectors.toList());
 	}
 
+	public List<String> getImportsIncludingAnnotations() {
+		Set<String> additional = new HashSet<>();
+		this.getAnnotations().forEach(ann -> additional.addAll(ann.getImports()));
+		this.getMethods().forEach(me ->
+			me.getAnnotations().forEach(ann -> additional.addAll(ann.getImports())));
+		return getImports(additional.toArray(new String[] {}));
+	}
+	
 	/**
 	 * The name of this class 
 	 * @return a {@link JClassName}
@@ -188,7 +196,7 @@ public class JInterface extends JElement implements JTemplateInput  {
 		return this.supertypes.stream()
 			.filter(t -> t.isCompiled())
 			.map(t -> t.typeOf(fqn))
-			.anyMatch(b -> Boolean.TRUE.equals(b));
+			.anyMatch(b -> Boolean.TRUE.equals(b.orElse(Boolean.FALSE)));
 		
 	}
 

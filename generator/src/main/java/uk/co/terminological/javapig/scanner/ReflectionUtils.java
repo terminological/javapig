@@ -6,6 +6,7 @@ package uk.co.terminological.javapig.scanner;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import org.apache.commons.lang3.StringEscapeUtils;
 
 /**
  * @see #ReflectionJModelBuilder
@@ -113,9 +116,9 @@ public class ReflectionUtils {
 		}
 	}
 
-	
-	
-	
+
+
+
 	/**
 	 * Get the underlying class for a type, or null if the type is a variable type.
 	 * @param type the type
@@ -274,5 +277,131 @@ public class ReflectionUtils {
 		}
 	}
 
-	
+	public static Class<?> box(Type primitiveType) {
+		if (primitiveType.equals(Byte.TYPE)) {return Byte.class;}
+		if (primitiveType.equals(Short.TYPE)) {return Short.class;}
+		if (primitiveType.equals(Integer.TYPE)) {return Integer.class;}
+		if (primitiveType.equals(Long.TYPE)) {return Long.class;}
+		if (primitiveType.equals(Float.TYPE)) {return Float.class;}
+		if (primitiveType.equals(Double.TYPE)) {return Double.class;}
+		if (primitiveType.equals(Boolean.TYPE)) {return Boolean.class;}
+		if (primitiveType.equals(Character.TYPE)) {return Character.class;}
+		if (primitiveType.equals(Void.TYPE)) {return Void.class;}
+		else return (Class<?>) primitiveType;
+	}
+
+	public static class AnnotationToSource {
+
+		Annotation annotation;
+		StringBuilder code = new StringBuilder();
+
+		private AnnotationToSource(Annotation annotation) {this.annotation = annotation;}
+
+		public static String convert(Annotation annotation) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			AnnotationToSource out = new AnnotationToSource(annotation);
+			out.code.append("@"+annotation.annotationType().getSimpleName());
+			StringBuilder tmp = new StringBuilder();
+			boolean first = true;
+			for (Method m: annotation.annotationType().getMethods()) {
+				if (!Arrays.asList("hashCode","equals","toString","annotationType").contains(m.getName())) {
+					if (!first) tmp.append(", ");
+					tmp.append(out.convertMethod(m));
+					first = false;
+				}
+			}
+
+			if (tmp.length() > 0) {
+				out.code.append("("+tmp.toString()+")");
+			}
+			return out.code.toString();
+		}
+
+		private String convertMethod(Method method) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			StringBuilder out = new StringBuilder();
+			out.append(method.getName()+"=");
+			if (method.getReturnType().isArray()) {
+				Object[] tmp = (Object[]) method.invoke(annotation);
+				out.append("{");
+				boolean first = false;
+				for (Object v: tmp) {
+					if (!first) out.append(",");
+					out.append(this.convertValue(v));
+					first = false;
+				}
+				out.append("}");
+			} else {
+				out.append(convertValue(method.invoke(annotation)));
+			}
+			return out.toString();
+		};
+
+		private String convertValue(Object o) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			if (o instanceof Class) {
+				return ((Class<?>) o).getName()+".class";
+			} else if (o instanceof Enum) {
+				return o.getClass().getSimpleName()+"."+((Enum<?>) o).name();
+			} else if (o instanceof Annotation) {
+				return AnnotationToSource.convert((Annotation) o);
+			} else { 
+				return primitiveToSource(o);
+			}
+		}
+	}
+
+	public static class AnnotationImports {
+
+		Annotation annotation;
+		Set<String> imports = new HashSet<>();
+
+		private AnnotationImports(Annotation annotation) {this.annotation = annotation;}
+
+		public static Set<String> scan(Annotation annotation) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			AnnotationImports out = new AnnotationImports(annotation);
+			for (Method m: annotation.annotationType().getMethods()) {
+				if (!Arrays.asList("hashCode","equals","toString","annotationType").contains(m.getName())) {
+					out.scanMethod(m);
+				}
+			}
+			return out.imports;
+		}
+
+		private void scanMethod(Method method) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			if (method.getReturnType().isArray()) {
+				Object[] tmp = (Object[]) method.invoke(annotation);
+				for (Object v: tmp) {
+					this.scanValue(v);
+				}
+			} else {
+				scanValue(method.invoke(annotation));
+			}
+		};
+
+		private void scanValue(Object o) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			if (o instanceof Class) {
+				this.imports.add(((Class<?>) o).getCanonicalName());
+			} else if (o instanceof Enum) {
+				this.imports.add(((Enum<?>) o).getClass().getCanonicalName());
+			} else if (o instanceof Annotation) {
+				this.imports.addAll(AnnotationImports.scan((Annotation) o));
+			} else { 
+				return;
+			}
+		}
+	}
+
+	private static String primitiveToSource(Object o) {
+		Class<?> primitiveType = o.getClass();
+		if (o instanceof Byte || primitiveType.equals(Byte.TYPE)) {return Byte.toString((byte) o);}
+		if (o instanceof Short || primitiveType.equals(Short.TYPE)) {return Short.toString((short) o);}
+		if (o instanceof Long || primitiveType.equals(Long.TYPE)) {return Long.toString((long) o)+"L";}
+		if (o instanceof Integer || primitiveType.equals(Integer.TYPE)) {return Integer.toString((int) o);}
+		if (o instanceof Float || primitiveType.equals(Float.TYPE)) {return Float.toString((float) o)+"F";}
+		if (o instanceof Double || primitiveType.equals(Double.TYPE)) {return Double.toString((double) o)+"D";}
+		if (o instanceof Boolean || primitiveType.equals(Boolean.TYPE)) {return ((boolean) o) ? "true" : "false";}
+		if (o instanceof Character || primitiveType.equals(Character.TYPE)) {return "'"+o.toString()+"'";}
+		if (o instanceof Void || primitiveType.equals(Void.TYPE)) {return "void";}
+		if (o instanceof String) return "\""+StringEscapeUtils.escapeJava(o.toString())+"\"";
+		else throw new ClassCastException("Not a primitive type "+primitiveType.getCanonicalName());
+	}
+
 }

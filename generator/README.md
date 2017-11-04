@@ -48,7 +48,7 @@ In theory you can get eclipse to run annotation processors during code authoring
 
 ## As a dedicated maven plugin
 
-This mechanism addresses some of the issues above in that it pulls the code generation out of the annotation processor steps into its own phase. This plugin can be configured as follows:
+This mechanism addresses some of the issues above in that it pulls the code generation out of the annotation processor steps into its own phase. This tends to be more reliable. This plugin can be configured as follows:
 
 	<dependencies>
 		...

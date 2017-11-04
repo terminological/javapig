@@ -47,7 +47,12 @@ public enum BuiltIn implements Serializable, JModelAdaptor {
 			Scope.MODEL, 
 			"debug-model.ftl", 
 			"${rootPackage}.debug", 
-			"txt")
+			"txt"),
+	CORE (
+			Scope.INTERFACE, 
+			"core-interface.ftl", 
+			"${classFQN}", 
+			"java")
 	;
 	
 	private Scope[] scope;

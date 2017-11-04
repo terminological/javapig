@@ -9,7 +9,7 @@ import java.util.List;
 import org.apache.log4j.BasicConfigurator;
 import uk.co.terminological.datatypes.Deferred;
 import uk.co.terminological.parser.DelimitedParserBuilder;
-import uk.co.terminological.parser.StateMachineException;
+import uk.co.terminological.parser.ParserException;
 
 public class Tester {
 
@@ -18,12 +18,12 @@ public class Tester {
 	}
 
 
-	public static void main(String[] args) throws IOException, StateMachineException {
+	public static void main(String[] args) throws IOException, ParserException {
 		BasicConfigurator.configure();
 		InputStream is = Tester.class.getResourceAsStream("/csv1.csv");
 		Reader in = new InputStreamReader(is,"UTF-8");
-		Iterable<Deferred<List<String>, StateMachineException>> util = DelimitedParserBuilder.excelCsv(in);
-		for (Deferred<List<String>, StateMachineException> item: util) {
+		Iterable<Deferred<List<String>, ParserException>> util = DelimitedParserBuilder.excelCsv(in);
+		for (Deferred<List<String>, ParserException> item: util) {
 				item.get().forEach(System.out::println);
 				System.out.println("NL");
 		}

@@ -91,11 +91,13 @@ model:
 <#list 1..indent as i>    </#list>    ${import}
 </#list>
 <#list 1..indent as i>    </#list>.getCanonicalName(): ${annotation.getCanonicalName()}
-<#list annotation.getEntries() as annotationEntry>
+<#-- <#list annotation.getEntries() as annotationEntry>
 <@printAnnotationEntry annotationEntry indent+1/>
-</#list>
+</#list>-->
+<#list 1..indent as i>    </#list>.toSourceCode(): ${annotation.toSourceCode()}
 </#macro>
 
+<#-- 
 <#macro printAnnotationEntry annotationEntry indent>
 <#list 1..indent as i>    </#list>.getMethod().getter(): ${annotationEntry.getMethod().getter()}
 <#list 1..indent as i>    </#list>.getValues():
@@ -105,11 +107,11 @@ model:
 </#macro>
 
 <#macro printAnnotationValue annotationValue indent>
-<#list 1..indent as i>    </#list>.getValue(): <#if annotationValue.isPrimitive()>${annotationValue.getValue()}</#if>
+<#list 1..indent as i>    </#list>.getValue(): <#if annotationValue.isPrimitive()>${annotationValue.getValue().toString()}</#if>
 <#if annotationValue.isClass()><@printClassName annotationValue.getValue() indent+1/></#if>
 <#if annotationValue.isAnnotation()><@printAnnotation annotationValue.getValue() indent+1/></#if>
 </#macro>
-
+-->
 
 <#macro printClassName className indent>
 <#if className!="none">

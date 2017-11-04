@@ -4,7 +4,7 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-<#list class.getImports(fqn+"Fluent", "java.util.Observable") as import>
+<#list class.getImports(fqn+"Fluent", "java.util.*") as import>
 import ${import};
 </#list>
 <#if package.getMetadata().isEnabled("VISITOR")>import ${rootPackage}.Visitor;</#if>

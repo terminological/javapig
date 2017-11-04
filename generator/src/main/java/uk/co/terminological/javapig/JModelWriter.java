@@ -34,9 +34,10 @@ public class JModelWriter {
 	private File target;
 	private Configuration cfg;
 	private Project model;
+	private boolean overwrite;
 
 	public JModelWriter() {};
-	
+
 	public void setFiler(Filer filer) {
 		this.filer = filer;
 	}
@@ -44,27 +45,33 @@ public class JModelWriter {
 	public void setTargetDirectory(File targetDirectory) {
 		this.target = targetDirectory;
 	}
-	
+
 	public void setModel(Project model) {
 		this.model = model;
 	}
 
 	public void write() {
+		this.overwrite = true;
 		write(model);
 	}
-	
+
+	public void writeSafe() {
+		this.overwrite = false;
+		write(model);
+	}
+
 	private void write(Project model) {
 
 		if (target == null) throw new RuntimeException("No target directory has been set");
-		
+
 		cfg = new Configuration(Configuration.VERSION_2_3_25);
 		cfg.setObjectWrapper(new DefaultObjectWrapperBuilder(Configuration.VERSION_2_3_25).build());
 		cfg.setDefaultEncoding("UTF-8");
 		cfg.setTemplateExceptionHandler(TemplateExceptionHandler.DEBUG_HANDLER);
 
-		
+
 		for (JTemplateInput rootPack : model.getRootPackages()) {
-			
+
 			List<JModelAdaptor> userDefined = new ArrayList<>(); 
 			userDefined.addAll(rootPack.getMetadata().getBuiltIns());
 			for (String clsName: rootPack.getMetadata().getPlugIns()) {
@@ -74,12 +81,12 @@ public class JModelWriter {
 					throw new RuntimeException("Plugin :"+clsName+" cannot be resolved",e);
 				}
 			}
-			
+
 			for (JModelAdaptor adaptor: userDefined) {
-				
+
 				Project tmpModel = adaptor.adapt(model);
 				JTemplateInput tmpRootPack = tmpModel.findPackage(rootPack.getName().toString());
-			
+
 				for (JTemplateInput pack: ((JPackage) tmpRootPack).getPackages()) {
 
 					doGenerate(adaptor, tmpModel, tmpRootPack, pack);
@@ -167,54 +174,70 @@ public class JModelWriter {
 		try {
 
 			Writer out;
-			
+
 			// the filer is available in the context of a annotation processor execution.
 			// if javapig is excuted from maven we will find out where to write stuff ourselves.
-			
+
 			if (filer != null) {
 				try {
 					FileObject file;
-					if (!extension.equals("java")) {
-						file = filer.createResource(StandardLocation.SOURCE_OUTPUT, root.get("packagename").toString(), root.get("classname")+"."+extension, (Element[]) null);
-						System.out.println("Writing class: "+classname+" to "+file.toUri().toURL().getFile());
+					File filename = targetFilePath(target,classname, extension);
+					if (!filename.exists() || overwrite == true) {
+						if (!extension.equals("java")) {
+							file = filer.createResource(StandardLocation.SOURCE_OUTPUT, root.get("packagename").toString(), root.get("classname")+"."+extension, (Element[]) null);
+							System.out.println("Writing class: "+classname+" to "+file.toUri().toURL().getFile());
+						} else {
+							file = filer.createSourceFile(classname);
+							System.out.println("Writing resource: "+classname+" to "+file.toUri().toURL().getFile());
+						}
+						out = file.openWriter();
+						tmp.process(root, out);
+						out.close();
 					} else {
-						file = filer.createSourceFile(classname);
-						System.out.println("Writing resource: "+classname+" to "+file.toUri().toURL().getFile());
+						System.out.println("Safe mode: skipping pre-existing file: "+filename.getAbsolutePath());
 					}
-					out = file.openWriter();
-				
+
 				} catch (FilerException e) {
-					
+
 					// This usually happens when the filer has created a source file already in this run
 					// unfortunately we do need to write the same file twice if there are dependencies
 					// on generated code in the source code, so we have to work around this issue
-					
+
 					File file = targetFilePath(target,classname, extension);
-					System.out.println("Forcing update: "+classname+" to "+file.getAbsolutePath());
-					file.delete();
-					out = new PrintWriter(new FileOutputStream(file));
-					
+					if (!file.exists() || overwrite == true) {
+						System.out.println("Forcing update: "+classname+" to "+file.getAbsolutePath());
+						file.delete();
+						out = new PrintWriter(new FileOutputStream(file));
+						tmp.process(root, out);
+						out.close();
+					} else {
+						System.out.println("Safe mode: skipping pre-existing file: "+file.getAbsolutePath());
+					}
+
 				}
 			} else {
-				
+
 				//This will happen if the generator is triggered from the maven plugin rather than 
 				//nby the annotation processor.
-				
-				File file = targetFilePath(target,classname, extension);
-				out = new PrintWriter(new FileOutputStream(file));
-				System.out.println("Writing class: "+classname+" to "+file.getAbsolutePath());
-				
-			}
-			tmp.process(root, out);
-			out.close();
 
-			
-			
+				File file = targetFilePath(target,classname, extension);
+				if (!file.exists() || overwrite == true) {
+					out = new PrintWriter(new FileOutputStream(file));
+					System.out.println("Writing class: "+classname+" to "+file.getAbsolutePath());
+					tmp.process(root, out);
+					out.close();
+				} else {
+					System.out.println("Safe mode: skipping pre-existing file: "+file.getAbsolutePath());
+				}
+
+			}
+
+
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 			// this should not happen. 
-			
+
 		} catch (TemplateException e) {
 			System.out.println("Error in freemarker template: "+classname);
 			System.out.println("==============================");

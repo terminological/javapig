@@ -5,7 +5,7 @@ package ${packagename};
 
 import javax.annotation.Generated;
 import ${rootPackage}.Indexes;
-<#list class.getImports() as import>
+<#list class.getImports("java.util.List") as import>
 import ${import};
 </#list>
 
@@ -91,8 +91,8 @@ public class ${classname} implements ${sn} {
 		if (obj == null)
 			return false;
 		${classname} other = (${classname}) obj;
-		for (int i=0; i < csvInput.size; i++) { 
-			if (!this.csvInput.get(i).equals(other.csvInput.get(i)) return false;
+		for (int i=0; i < csvInput.size(); i++) { 
+			if (!this.csvInput.get(i).equals(other.csvInput.get(i))) return false;
 		}
 		return true;
 	}

@@ -4,7 +4,7 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-<#list class.getImports() as import>
+<#list class.getImports("java.util.*") as import>
 import ${import};
 </#list>
 <#list class.getMethods() as method>
