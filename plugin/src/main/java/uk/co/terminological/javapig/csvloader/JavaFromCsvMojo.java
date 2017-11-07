@@ -11,6 +11,9 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -25,9 +28,9 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import uk.co.terminological.datatypes.EavMap;
 import uk.co.terminological.datatypes.FluentList;
 import uk.co.terminological.datatypes.FluentSet;
+import uk.co.terminological.datatypes.Triple;
 import uk.co.terminological.javapig.JModelWriter;
 import uk.co.terminological.javapig.annotations.BuiltIn;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
@@ -55,31 +58,33 @@ public class JavaFromCsvMojo extends AbstractMojo {
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
 		JProject proj = new JProject();
-		FileFilter filter = new WildcardFileFilter(this.filenameFilter);
-		File[] inputs = this.baseDirectory.listFiles(filter);
-		
 		ArrayList<JavaFromCsvExecution> executions = new ArrayList<>();
-
-		for (File input: inputs) {
-			JavaFromCsvExecution execution = new JavaFromCsvExecution();
-			execution.setFile(input);
-			execution.setType(defaultType);
-			execution.setTargetFQN(ProxyMapWrapper.className(defaultTargetPackage,input.getName()));
-			executions.add(execution);
+		if (baseDirectory != null && filenameFilter != null && defaultTargetPackage != null) {
+			FileFilter filter = new WildcardFileFilter(this.filenameFilter);
+			File[] inputs = this.baseDirectory.listFiles(filter);
+			
+			for (File input: inputs) {
+				JavaFromCsvExecution execution = new JavaFromCsvExecution();
+				execution.setFile(input);
+				execution.setType(defaultType);
+				execution.setTargetFQN(ProxyMapWrapper.className(defaultTargetPackage,input.getName()));
+				executions.add(execution);
+			}
+	
+			if (javaFromCsvExecutions != null) {
+				executions.addAll(Arrays.asList(javaFromCsvExecutions));
+			}
 		}
-
-		if (javaFromCsvExecutions != null) {
-			executions.addAll(Arrays.asList(javaFromCsvExecutions));
-		}
-
 		for (JavaFromCsvExecution f: executions) {
 			try {
 
 				System.out.println("JavaFromCSV Execution: "+ f.getFile().getCanonicalPath() + ": as "+ f.getTargetFQN());
 				BufferedReader in = Files.newBufferedReader(f.getFile().toPath());
+				
+				// next section needed as large files not streamed correctly by Delimited - takes first 50 lines
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				PrintWriter out = new PrintWriter(baos);
-				int i = 3;
+				int i = 50;
 				String line;
 				while (i>0 && (line = in.readLine())!=null ) {
 					out.println(line);
@@ -89,6 +94,8 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				in.close();
 				out.close();
 				Reader head = new StringReader(new String(baos.toByteArray()));
+				// TODO fix delimited.
+				
 				Delimited.Format d = Delimited.fromReader(head);
 				Delimited.Content c = null;
 				switch (f.getType()) {
@@ -112,9 +119,40 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				}
 				Content content = c.headerLabels().noIdentifiers();
 				Delimited parser = content.begin();
-				EavMap<String,String,String> map = parser.getContents();
-				Optional<Map<String,String>> first = map.streamEntities().findFirst().map(kv -> kv.getValue());
-				Map<String,Class<?>> methodSignatures = StringCaster.guessTypes(first.get());
+				
+				List<String> headers = parser.getHeaders();
+				
+				Map<String,Class<?>> methodSignatures = new LinkedHashMap<>();
+				headers.stream().forEach(k -> methodSignatures.put(k, null));
+				
+				Iterator<Triple<Long,Integer,String>> tmp = parser.streamContentsByRow().iterator();
+				
+				boolean allDone = false;
+				while (tmp.hasNext() && !allDone) {
+					Triple<Long,Integer,String> tmpValue = tmp.next();
+					if (tmpValue.value() != null && !tmpValue.value().isEmpty()) {
+						Class<?> guess = StringCaster.guessType(tmpValue.value());
+						String methodName = headers.get(tmpValue.attribute());
+						Class<?> current = methodSignatures.get(methodName); 
+						if (current != null) {
+							if (!current.equals(guess)) {
+								methodSignatures.put(methodName, String.class);
+							} else {
+								//no need to update.
+							}
+						} else {
+							methodSignatures.put(methodName, guess);
+						}
+					}
+					allDone = !methodSignatures.containsValue(null);
+				}
+				
+				for (String key: methodSignatures.keySet()) {
+					if (methodSignatures.get(key) == null) methodSignatures.put(key, String.class);
+				}
+				
+				parser.close();
+				
 				proj.addPackage(new JPackage(proj, "",
 						FluentList.empty(), 
 						JClassName.from(f.getTargetFQN()).getPackageName(), 
