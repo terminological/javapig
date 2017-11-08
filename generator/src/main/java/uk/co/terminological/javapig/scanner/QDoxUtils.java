@@ -410,7 +410,10 @@ public class QDoxUtils {
 								}
 							} else {
 								//Qdox doesn't know about this field
-								throw new RuntimeException("The field: "+fieldName+" doesn't exist in the class: "+containingClassFQN);
+								//Maybe we can't know this thing yet because it is part of 
+								//generated code that hasn't been built yet
+								//lets ignore this but return a string...
+								return fieldName;
 							}
 						} else {
 							//QDox doesn't know about this class - it may not yet have been generated

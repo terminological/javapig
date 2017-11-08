@@ -1,4 +1,4 @@
-package uk.co.terminological.javapig.test.annnotation;
+package uk.co.terminological.javapig.test.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -8,7 +8,9 @@ import java.lang.annotation.Target;
 
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
-public @interface ClassHolder {
-	Class<?> value();
+@Target({ElementType.TYPE})
+public @interface Tester {
+	String string() default "a default value";
+	int integer() default 5;
+	float floater() default 1.2F;
 }

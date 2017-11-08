@@ -15,8 +15,9 @@ import java.io.Reader;
 import java.util.*;
 
 
-<#list model.getClasses() as class>
+<#list model.getCsvClasses() as class>
 import ${class.getName().getCanonicalName()};
+import ${class.getName().getCanonicalName()}Csv;
 </#list>
 
 /**

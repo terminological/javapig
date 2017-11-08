@@ -3,35 +3,43 @@ package ${packagename};
 import javax.annotation.Generated;
 import java.util.*;
 
-<#list model.getClasses() as class>
+<#list model.getPackages() as package>
+	<#list package.getClasses() as class>
 import ${class.getName().getCanonicalName()};
-	<#if model.isEnabled("IMPL")>
+		<#if package.isEnabled("IMPL")>
 import ${class.getName().getCanonicalName()}Impl;
-	</#if>
-	<#if model.isEnabled("FLUENT_IMPL")>
+		</#if>
+		<#if package.isEnabled("FLUENT_IMPL")>
 import ${class.getName().getCanonicalName()}Fluent;
 import ${class.getName().getCanonicalName()}FluentImpl;
-	</#if>
+		</#if>
+	</#list>
 </#list>
 
 @Generated({"uk.co.terminological.javapig.JModelWriter"})
 public class ${classname} {
 
-<#if model.isEnabled("FLUENT_IMPL")>
+
 	@Generated({"uk.co.terminological.javapig.JModelWriter"})
 	public static class Mutable {
-	<#list model.getClasses() as class>
+<#list model.getPackages() as package>
+	<#if package.isEnabled("FLUENT_IMPL")>
+		<#list package.getClasses() as class>
 		
 		public static ${class.getName().getSimpleName()}Fluent create${class.getName().getSimpleName()}() {
 			return ${class.getName().getSimpleName()}FluentImpl.create();
 		}
-	</#list>
+		</#list>
+	</#if>
+</#list>
 	}
-</#if>
-<#if model.isEnabled("IMPL")>
+
+
 	@Generated({"uk.co.terminological.javapig.JModelWriter"})
 	public static class Immutable {
-	<#list model.getClasses() as class>
+<#list model.getPackages() as package>
+	<#if package.isEnabled("IMPL")>
+	<#list package.getClasses() as class>
 		
 		public static ${class.getName().getSimpleName()}Builder create${class.getName().getSimpleName()}() {
 			return new ${class.getName().getSimpleName()}Builder();
@@ -81,6 +89,7 @@ public class ${classname} {
 			}	
 		}
 	</#list>
+	</#if>
+</#list>
 	}
-</#if>
 }

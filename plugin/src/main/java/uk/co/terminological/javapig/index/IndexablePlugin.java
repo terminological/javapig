@@ -4,15 +4,15 @@ import uk.co.terminological.javapig.annotations.Scope;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JModelAdaptor;
-import uk.co.terminological.javapig.javamodel.JPackage;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JTemplateInput;
 import uk.co.terminological.javapig.javamodel.tools.JModelCopier;
 
 public abstract class IndexablePlugin extends JModelCopier implements JModelAdaptor {
 
 	@Override
-	public IndexablePackage map(JPackage in) {
-		return new IndexablePackage(in);
+	public IndexableProject map(JProject in) {
+		return new IndexableProject(in);
 	}
 	
 	@Override

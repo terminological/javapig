@@ -1,11 +1,30 @@
+<#macro getKey method><#-- Assumes a parameter 'value' exists and is source for our key -->
+			Optional<${method.keyType()}> key;
+	<#if method.isOptional()>
+		<#if method.returnTypeIsIndexed()>
+			key = value.${method.getName().getter()}().map(o ->
+				o.${method.indexedReturnType().getIdentifier().getName().getter()}());
+		<#else>
+			key = value.${method.getName().getter()}();
+		</#if>
+	<#else>
+		<#if method.returnTypeIsIndexed()>
+			key = Optional.ofNullable(value.${method.getName().getter()}()).map(o ->
+				o.${method.indexedReturnType().getIdentifier().getName().getter()}());
+		<#else>
+			key = Optional.ofNullable(value.${method.getName().getter()}());
+		</#if>
+	</#if>
+</#macro>
+
 package ${rootPackage};
 
 import java.io.Serializable;
 import javax.annotation.Generated;
 import java.util.*;
 
-<#list model.getPrimaryIndexes() as method>
-import ${method.getDeclaringClass().getName().getCanonicalName()};
+<#list model.getIndexedClasses() as class>
+import ${class.getName().getCanonicalName()};
 </#list>
 
 @Generated({"uk.co.terminological.javapig.JModelWriter"})
@@ -50,47 +69,20 @@ public class ${classname} implements Serializable {
 		this.indexed${class.getName().getSimpleName()}.add(value);
 	<#list class.getPrimaryIndexes() as method>
 		{
-		<#if method.returnTypeIsIndexed()>
-			//indexed return type: ${method.keyType()} 
-			${method.indexedReturnKeyType().getSimpleName()} key = value.${method.getName().getter()}().${method.indexedReturnType().getIdentifier().getName().getter()}();
-		<#else>
-			//simple return type: ${method.keyType()}
-			<#if method.isOptional()>
-			Optional<${method.keyType()}> key = value.${method.getName().getter()}();
+		<@getKey method/>
 			if (key.isPresent()) ${method.indexField()}.put(key.get(), value);
-			<#else>
-			${method.keyType()} key = value.${method.getName().getter()}();
-			if (key != null) ${method.indexField()}.put(key, value);
-			</#if>
-		</#if>
 		}
 	</#list>
 	<#list class.getSecondaryIndexes() as method>
 		{
-		<#if method.returnTypeIsIndexed()>
-			//indexed return type: ${method.keyType()} 
-			${method.indexedReturnKeyType().getSimpleName()} key = value.${method.getName().getter()}().${method.indexedReturnType().getIdentifier().getName().getter()}();
-			if (key != null) {
-				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
-				${method.indexField()}.get(key).add(value);
-			}
-			<#-- support for optionals here? -->
-		<#else>
-			//simple return type: ${method.keyType()}
-			<#if method.isOptional()>
-			Optional<${method.keyType()}> key = value.${method.getName().getter()}();
+		<@getKey method/>
 			if (key.isPresent()) {
-				if (${method.indexField()}.get(key.get()) == null) ${method.indexField()}.put(key.get(), new HashSet<>());
+				if (${method.indexField()}.get(key.get()) == null) {
+					//create if doesn't exist
+					${method.indexField()}.put(key.get(), new HashSet<>());
+				}
 				${method.indexField()}.get(key.get()).add(value);
 			}
-			<#else>
-			${method.keyType()} key = value.${method.getName().getter()}();
-			if (key != null) {
-				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
-				${method.indexField()}.get(key).add(value);
-			}
-			</#if>
-		</#if>
 		}
 	</#list>
 	}
@@ -114,45 +106,37 @@ public class ${classname} implements Serializable {
 	<#list class.getSecondaryIndexes() as method>
 	public Set<${method.valueType()}> ${method.indexFinder()}(${method.keyType()} key) {
 		if (key == null) return Collections.emptySet();
-		<#if method.returnTypeIsIndexed()>
-		${method.indexedReturnKeyType().getSimpleName()} keyId = key.${method.indexedReturnType().getIdentifier().getName().getter()}();
-		if (!${method.indexField()}.containsKey(keyId)) return Collections.emptySet();
-		return ${method.indexField()}.get(keyId);
-		<#else>
 		if (!${method.indexField()}.containsKey(key)) return Collections.emptySet();
 		return ${method.indexField()}.get(key);
-		</#if>
 	} 
 	
 	</#list>
-	public Set<${class.getName().getSimpleName()}> findByExample${class.getName().getSimpleName()}(${class.getName().getSimpleName()} proto) {
+	public Set<${class.getName().getSimpleName()}> findByExample${class.getName().getSimpleName()}(${class.getName().getSimpleName()} value) {
 	<#list class.getPrimaryIndexes() as method>
 		{
-			${method.keyType()} key = proto.${method.getName().getter()}();
-			Optional<${method.valueType()}> value = ${method.indexFinder()}(key);
-			if (value.isPresent()) {
-				return Collections.singleton(value.get()); //return single value if any unique key matches
+		<@getKey method/>
+			if (key.isPresent()) {
+				Optional<${method.valueType()}> entry = ${method.indexFinder()}(key.get());
+				if (entry.isPresent()) {
+					// return single value if any unique key matches
+					return Collections.singleton(entry.get()); 
+				}
 			}
 		}
 	</#list>
+		// look for intersection of hits from all secondary indexes
 		Set<${class.getName().getSimpleName()}> out = new HashSet<>();
 		boolean found = false;
 	<#list class.getSecondaryIndexes() as method>
 		{
-		<#if method.isOptional()>
-			Optional<${method.keyType()}> key = proto.${method.getName().getter()}();
+		<@getKey method/>
 			if (key.isPresent()) {
-				Set<${method.valueType()}> value = ${method.indexFinder()}(key.get());
-		<#else>
-			${method.keyType()} key = proto.${method.getName().getter()}();
-			if (key != null) {
-				Set<${method.valueType()}> value = ${method.indexFinder()}(key);
-		</#if>
+				Set<${method.valueType()}> entry = ${method.indexFinder()}(key.get());
 				if (!found) {
-					out = value;
+					out = entry;
 					found = true;
 				} else {
-					out.retainAll(value);
+					out.retainAll(entry);
 				}
 			}
 		}
@@ -166,37 +150,21 @@ public class ${classname} implements Serializable {
 		this.indexed${class.getName().getSimpleName()}.remove(value);
 	<#list class.getPrimaryIndexes() as method>
 		{
-			//Primary index - ${class.getName().getSimpleName()} by ${method.getName().getter()}
-			${method.keyType()} key = value.${method.getName().getter()}();
-			if (key != null) ${method.indexField()}.remove(key);
+			//Primary index - ${method.indexField()} = ${class.getName().getSimpleName()} by ${method.getName().getter()}
+		<@getKey method/>
+			if (key.isPresent()) {
+				${method.indexField()}.remove(key.get());
+			}
 		}
 	</#list>
 	<#list class.getSecondaryIndexes() as method>
 		{
-		<#if method.returnTypeIsIndexed()>
-			//indexed return type: ${method.keyType()} 
-			${method.indexedReturnKeyType().getSimpleName()} key = value.${method.getName().getter()}().${method.indexedReturnType().getIdentifier().getName().getter()}();
-			if (key != null) {
-				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
-				${method.indexField()}.get(key).remove(value);
-			}
-			<#-- support for optionals here? -->
-		<#else>
-			//simple return type: ${method.keyType()}
-			<#if method.isOptional()>
-			Optional<${method.keyType()}> key = value.${method.getName().getter()}();
+			//Secondary index - ${method.indexField()} = ${class.getName().getSimpleName()} by ${method.getName().getter()}
+		<@getKey method/>
 			if (key.isPresent()) {
 				if (${method.indexField()}.get(key.get()) == null) ${method.indexField()}.put(key.get(), new HashSet<>());
 				${method.indexField()}.get(key.get()).remove(value);
 			}
-			<#else>
-			${method.keyType()} key = value.${method.getName().getter()}();
-			if (key != null) {
-				if (${method.indexField()}.get(key) == null) ${method.indexField()}.put(key, new HashSet<>());
-				${method.indexField()}.get(key).remove(value);
-			}
-			</#if>
-		</#if>
 		}
 	</#list>
 	}

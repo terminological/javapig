@@ -85,10 +85,14 @@ public class JModelWriter {
 			for (JModelAdaptor adaptor: userDefined) {
 
 				Project tmpModel = adaptor.adapt(model);
-				JTemplateInput tmpRootPack = tmpModel.findPackage(rootPack.getName().toString());
+				JPackage tmpRootPack = (JPackage) tmpModel.findPackage(rootPack.getName().toString());
 
-				for (JTemplateInput pack: ((JPackage) tmpRootPack).getPackages()) {
+				System.out.println("Root package container: "+tmpRootPack.getName().toString());
+				//doGenerate(adaptor, tmpModel, tmpRootPack, tmpRootPack);
+				
+				for (JTemplateInput pack: tmpRootPack.getPackages()) {
 
+					System.out.println("Actual package: "+pack.getName().toString());
 					doGenerate(adaptor, tmpModel, tmpRootPack, pack);
 				}
 
@@ -106,6 +110,7 @@ public class JModelWriter {
 				cfg.setClassForTemplateLoading(adaptor.getClass(),"");
 			}
 			Template tmp = cfg.getTemplate(adaptor.getTemplateFilename());
+			System.out.println("using template: "+adaptor.getTemplateFilename());
 			doGenerate(adaptor, tmp, model, rootPkg, pkg);
 		} catch (IOException e) {
 			System.out.println("failed to load freemarker template: "+adaptor.getTemplateFilename());
@@ -159,7 +164,7 @@ public class JModelWriter {
 			root.put("package", pkg);
 		case MODEL:
 			classname = classname.replace("${rootPackage}", rootPkg.getName().toString());
-			root.put("model", rootPkg);
+			root.put("model", model);
 		}
 		root.put("fqn", classname);
 		root.put("classname", classname.substring(classname.lastIndexOf(".")+1));

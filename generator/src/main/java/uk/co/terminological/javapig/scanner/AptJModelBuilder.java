@@ -173,7 +173,15 @@ public class AptJModelBuilder extends ElementScanner8<Void, Void> {
 
 
 	private boolean isInModel(Element e) {
-		return getModelAnn(e) != null;
+		if (getModelAnn(e).isPresent()) return true;
+		if (e instanceof PackageElement) {
+			String packName = ((PackageElement) e).getQualifiedName().toString();
+			if (packName.contains(".")) {
+				PackageElement pel = el.getPackageElement(packName.subSequence(0, packName.lastIndexOf('.')));
+				return isInModel(pel);
+			}
+		}
+		return false;
 	}
 
 	/*

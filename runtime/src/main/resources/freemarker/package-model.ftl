@@ -15,7 +15,7 @@ public class ${classname} {
 	// Mirror factories
 	// ================
 	
-	<#list model.getClasses() as class>
+	<#list package.getClasses() as class>
 		<#assign sn>${class.getName().getSimpleName()}</#assign>
 		<#assign fqn>${class.getName().getCanonicalName()}</#assign>
 	public static ${sn} reflect(${fqn} object) {
@@ -27,7 +27,7 @@ public class ${classname} {
 	// Class mirrors
 	// =============
 	
-	<#list model.getClasses() as class>
+	<#list package.getClasses() as class>
 		<#assign sn>${class.getName().getSimpleName()}</#assign>
 		<#assign fqn>${class.getName().getCanonicalName()}</#assign>
 	@Generated({"uk.co.terminological.javapig.JModelWriter"})

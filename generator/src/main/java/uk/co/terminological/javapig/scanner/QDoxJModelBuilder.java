@@ -69,8 +69,20 @@ public class QDoxJModelBuilder {
 		}
 		jpb.getClasses().stream().map(c->c.getCanonicalName()).forEach(System.out::println);
 		for (JavaClass clazz: jpb.getClasses()) {
-			System.out.println("Inspecting class: "+clazz.getCanonicalName());
-			if (isInModel(clazz) && notGenerated(clazz)) createClass(clazz);
+			JavaPackage pkg = this.jpb.getPackageByName(clazz.getPackageName());
+			/*System.out.println("Inspecting class: "+clazz.getCanonicalName()+" ("
+					+(isInModel(clazz)?"in model":"not in model")+" / "
+					+(notGenerated(clazz)?"not generated":"generated")+")"
+					+" [package: "+pkg.getName()+" "
+					+(isInModel(pkg)?"in model":"not in model")+"]"
+					+(QDoxUtils.hasAnnotation(Model.class,pkg)? "annotated":"not annotated")
+					);*/
+			if (isInModel(clazz) && notGenerated(clazz)) {
+				createClass(clazz);
+				System.out.println("Adding to project: "+clazz.getCanonicalName());
+			} else {
+				System.out.println("Not part of project: "+clazz.getCanonicalName());
+			}
 		}
 	}
 
@@ -212,12 +224,15 @@ public class QDoxJModelBuilder {
 	}
 
 	private boolean isInModel(JavaClass clazz) {
-		return isInModel(clazz.getPackage());
-		
+		return isInModel(this.jpb.getPackageByName(clazz.getPackageName()));
 	}
 
 	private boolean isInModel(JavaPackage tmp) {
-		return getModelAnn(tmp) != null;
+		if (getModelAnn(tmp).isPresent()) return true;
+		if (tmp.getParentPackage() != null) {
+			return isInModel(tmp.getParentPackage());
+		}
+		return false;
 	}
 
 	private Optional<Model> getModelAnn(JavaPackage tmp) {

@@ -3,12 +3,13 @@ package uk.co.terminological.javapig.csvloader;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import uk.co.terminological.javapig.index.IndexablePackage;
+import uk.co.terminological.javapig.index.IndexableProject;
 import uk.co.terminological.javapig.javamodel.JPackage;
+import uk.co.terminological.javapig.javamodel.JProject;
 
-public class CsvPackage extends IndexablePackage {
+public class CsvProject extends IndexableProject {
 
-	public CsvPackage(JPackage in) {
+	public CsvProject(JProject in) {
 		super(in);
 	}
 

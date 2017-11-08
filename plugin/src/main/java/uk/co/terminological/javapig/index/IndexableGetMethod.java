@@ -13,15 +13,16 @@ public class IndexableGetMethod extends JGetMethod {
 		//TODO: I need to change this so that in the case where a the returnTypeIsIndexed()
 		// we use the primary key of the retrieved object (i.e. the indexedReturnType()) instead of the
 		// stated return type of this method
-		/* if (this.returnTypeIsIndexed()) {
+		if (this.returnTypeIsIndexed()) {
 			return indexedReturnKeyType().getSimpleName();
-		} else */
+		} else {
 		// or maybe this logic should be in the template as sometimes we will have to derive this 
 		// value
 		if (this.isOptional()) {
 			return this.getUnderlyingType().getSimpleName();
 		} else {
 			return this.getImplementationType();
+		}
 		}
 	}
 	

@@ -1,15 +1,16 @@
+<#setting boolean_format="TRUE,FALSE"/>
 fqn: ${fqn}
 classname: ${classname}
 packagename: ${packagename}
 rootPackage: ${rootPackage}
 model:
-	.isEnabled("VISITOR"): ${model.isEnabled("VISITOR")?then("true","false")}
-	.getImports():
-	<#list model.getImports() as import>
-		${import}
-	</#list>
 	<#list model.getPackages() as package>
 	.getPackages(): [${package.getName()}]
+		.getImports():
+		<#list package.getImports() as import>
+			${import}
+		</#list>
+		.isEnabled("VISITOR"): ${package.isEnabled("VISITOR")}
 		.getName(): ${package.getName()}
 <@printElement package 2/>
 		.getMetadata(): 
@@ -21,7 +22,7 @@ model:
 		<#list package.getMetadata().getPlugIns() as plugin>
 				.toString(): ${plugin}
 		</#list>
-			.isEnabled("FACTORY"): ${package.getMetadata().isEnabled("FACTORY")?then("true","false")}
+			.isEnabled("FACTORY"): ${package.getMetadata().isEnabled("FACTORY")}
 		<#list package.getClasses() as class>
 		.getClasses() [${class.getName().getCanonicalName()}]:
 			.getName():
@@ -32,7 +33,7 @@ model:
 			<#list class.getImports() as import>
 				${import}
 			</#list>
-			.isTypeOf("java.lang.String"): ${class.isTypeOf("java.lang.String")?then("true","false")}
+			.isTypeOf("java.lang.String"): ${class.isTypeOf("java.lang.String")}
 			.getSupertypes():
 			<#list class.getSupertypes() as supertypeName>
 <@printClassName supertype!"none" 4/>
@@ -51,18 +52,18 @@ model:
 				.getInterfaceTypeFQN(): ${method.getInterfaceTypeFQN()} 
 				.getImplementationType(): ${method.getImplementationType()}
 				.getDeclaringClass().getName().getSimpleName(): ${method.getDeclaringClass().getName().getSimpleName()} 
-				.isDefault(): ${method.isDefault()?then("true","false")}
-				.isEnum(): ${method.isEnum()?then("true","false")}
-				.isPrimitive(): ${method.isPrimitive()?then("true","false")}
-				.isArray(): ${method.isArray()?then("true","false")}
-				.isParameterised(): ${method.isParameterised()?then("true","false")}
-				.isCollection(): ${method.isCollection()?then("true","false")}
-				.isList(): ${method.isList()?then("true","false")}
-				.isSet(): ${method.isSet()?then("true","false")}
-				.isOptional(): ${method.isParameterised()?then("true","false")}
-				.isTypeOf("java.lang.Cloneable"): ${method.isTypeOf("java.lang.Cloneable")?then("true","false")}
-				.isInModel(): ${method.isInModel()?then("true","false")}
-				.hasInverseMethod(): ${method.hasInverseMethod()?then("true","false")}
+				.isDefault(): ${method.isDefault()}
+				.isEnum(): ${method.isEnum()}
+				.isPrimitive(): ${method.isPrimitive()}
+				.isArray(): ${method.isArray()}
+				.isParameterised(): ${method.isParameterised()}
+				.isCollection(): ${method.isCollection()}
+				.isList(): ${method.isList()}
+				.isSet(): ${method.isSet()}
+				.isOptional(): ${method.isParameterised()}
+				.isTypeOf("java.lang.Cloneable"): ${method.isTypeOf("java.lang.Cloneable")}
+				.isInModel(): ${method.isInModel()}
+				.hasInverseMethod(): ${method.hasInverseMethod()}
 <#if method.hasInverseMethod()>
 				.getInverseMethod().getName():
 <@printMethodName method.getInverseMethod().getName() 5/>
@@ -77,7 +78,7 @@ model:
 
 <#macro printElement element indent>
 <#list 1..indent as i>    </#list>.getJavaDoc(): ${element.getJavaDoc()!"none"}
-<#list 1..indent as i>    </#list>.isAnnotationPresent("@Model"): ${element.isAnnotationPresent("@Model")?then("true","false")}
+<#list 1..indent as i>    </#list>.isAnnotationPresent("@Model"): ${element.isAnnotationPresent("@Model")}
 <#list element.getAnnotations() as annotation>
 <#list 1..indent as i>    </#list>.getAnnotations() [${annotation.getName()}]
 <@printAnnotation annotation indent+1/>
@@ -91,13 +92,12 @@ model:
 <#list 1..indent as i>    </#list>    ${import}
 </#list>
 <#list 1..indent as i>    </#list>.getCanonicalName(): ${annotation.getCanonicalName()}
-<#-- <#list annotation.getEntries() as annotationEntry>
+<#list annotation.getEntries() as annotationEntry>
 <@printAnnotationEntry annotationEntry indent+1/>
-</#list>-->
-<#list 1..indent as i>    </#list>.toSourceCode(): ${annotation.toSourceCode()}
+</#list>
+<#-- <#list 1..indent as i>    </#list>.toSourceCode(): ${annotation.toSourceCode()}-->
 </#macro>
 
-<#-- 
 <#macro printAnnotationEntry annotationEntry indent>
 <#list 1..indent as i>    </#list>.getMethod().getter(): ${annotationEntry.getMethod().getter()}
 <#list 1..indent as i>    </#list>.getValues():
@@ -107,11 +107,11 @@ model:
 </#macro>
 
 <#macro printAnnotationValue annotationValue indent>
-<#list 1..indent as i>    </#list>.getValue(): <#if annotationValue.isPrimitive()>${annotationValue.getValue().toString()}</#if>
+<#list 1..indent as i>    </#list>.getValue(): <#if annotationValue.isPrimitive()>${annotationValue.getValue()}</#if>
 <#if annotationValue.isClass()><@printClassName annotationValue.getValue() indent+1/></#if>
 <#if annotationValue.isAnnotation()><@printAnnotation annotationValue.getValue() indent+1/></#if>
 </#macro>
--->
+
 
 <#macro printClassName className indent>
 <#if className!="none">
@@ -119,8 +119,8 @@ model:
 <#list 1..indent as i>    </#list>.getCanonicalName(): ${className.getCanonicalName()}
 <#list 1..indent as i>    </#list>.getPackageName(): ${className.getPackageName()}
 <#list 1..indent as i>    </#list>.importName(): ${className.importName()}
-<#list 1..indent as i>    </#list>.isArray(): ${className.isArray()?then("true","false")}
-<#list 1..indent as i>    </#list>.isCompiled(): ${className.isCompiled()?then("true","false")}
+<#list 1..indent as i>    </#list>.isArray(): ${className.isArray()}
+<#list 1..indent as i>    </#list>.isCompiled(): ${className.isCompiled()}
 <#list 1..indent as i>    </#list>.code(): ${className.code()}
 <#else>
 <#list 1..indent as i>    </#list>none

@@ -24,9 +24,9 @@ public enum BuiltIn implements Serializable, JModelAdaptor {
 			"${classFQN}FluentImpl", 
 			"java"),
 	MIRROR (
-			Scope.MODEL, 
+			Scope.PACKAGE, 
 			"package-model.ftl", 
-			"${rootPackage}.Model", 
+			"${package}.Model", 
 			"java"),
 	VISITOR (
 			Scope.MODEL, 

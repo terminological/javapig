@@ -5,14 +5,14 @@ import uk.co.terminological.javapig.index.IndexablePlugin;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JModelAdaptor;
-import uk.co.terminological.javapig.javamodel.JPackage;
+import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JTemplateInput;
 
 public abstract class CsvPlugin extends IndexablePlugin implements JModelAdaptor {
 
 	@Override
-	public CsvPackage map(JPackage in) {
-		return new CsvPackage(in);
+	public CsvProject map(JProject in) {
+		return new CsvProject(in);
 	}
 
 	@Override

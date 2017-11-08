@@ -3,8 +3,8 @@ package uk.co.terminological.javapig.test.model;
 import java.util.Optional;
 
 import uk.co.terminological.javapig.annotations.Inverse;
-import uk.co.terminological.javapig.test.annnotation.ClassHolder;
-import uk.co.terminological.javapig.test.annnotation.Tester;
+import uk.co.terminological.javapig.test.annotation.ClassHolder;
+import uk.co.terminological.javapig.test.annotation.Tester;
 
 /**
  * @author robchallen
