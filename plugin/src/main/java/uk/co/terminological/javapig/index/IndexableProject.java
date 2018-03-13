@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 import javax.persistence.Id;
 
 import uk.co.terminological.javapig.javamodel.JGetMethod;
-import uk.co.terminological.javapig.javamodel.JPackage;
 import uk.co.terminological.javapig.javamodel.JProject;
 
 public class IndexableProject extends JProject {

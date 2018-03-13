@@ -4,14 +4,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 public class JavaFromSqlExecution {
 
-	@Parameter(required=true)
-	String sql;
-
-	@Parameter(required=true)
-	String targetFQN;
-	
 	public String getSql() {
-		return sql.contains(";") ? sql.substring(0, sql.indexOf(";")) : sql;
+		return sql;
 	}
 
 	public void setSql(String sql) {
@@ -26,5 +20,11 @@ public class JavaFromSqlExecution {
 		this.targetFQN = targetFQN;
 	}
 
+	@Parameter(required=true)
+	String sql;
+	
+	@Parameter(required=true)
+	String targetFQN;
+	
 	
 }
