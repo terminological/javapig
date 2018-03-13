@@ -261,7 +261,7 @@ by default the assumption is that the freemarker template is generating java cod
 
 the tricky bit. 
 
-1. Look at the examples in the runtime module (/src/main/resources/freemind) which give you an idea of what can be done with the templates.
+1. Look at the examples in the runtime module (/src/main/resources/freemarker) which give you an idea of what can be done with the templates.
 2. Generate a simple domain model that you want to generate code from and execute the built in template __Builtin.DEBUG__ on it.
 3. This will give you a file with an expansion of all the package level variables available to a freemarker template. Use this to pick the pieces you want.
 4. If you are using annotations to define your code generation experiment with their native java methods. If they have been compiled already then they should work, but you will quickly find out if not.
