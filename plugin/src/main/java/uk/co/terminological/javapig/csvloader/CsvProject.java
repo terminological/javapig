@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import uk.co.terminological.javapig.index.IndexableProject;
-import uk.co.terminological.javapig.javamodel.JPackage;
 import uk.co.terminological.javapig.javamodel.JProject;
 
 public class CsvProject extends IndexableProject {

@@ -13,11 +13,6 @@ import uk.co.terminological.parser.ParserException;
 
 public class Tester {
 
-	public Tester() {
-		// TODO Auto-generated constructor stub
-	}
-
-
 	public static void main(String[] args) throws IOException, ParserException {
 		BasicConfigurator.configure();
 		InputStream is = Tester.class.getResourceAsStream("/csv1.csv");

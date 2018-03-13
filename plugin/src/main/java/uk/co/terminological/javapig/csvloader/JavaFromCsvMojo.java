@@ -94,8 +94,6 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				in.close();
 				out.close();
 				Reader head = new StringReader(new String(baos.toByteArray()));
-				// TODO fix delimited.
-				
 				Delimited.Format d = Delimited.fromReader(head);
 				Delimited.Content c = null;
 				switch (f.getType()) {
@@ -153,13 +151,16 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				
 				parser.close();
 				
-				proj.addPackage(new JPackage(proj, "",
-						FluentList.empty(), 
-						JClassName.from(f.getTargetFQN()).getPackageName(), 
-						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE),
-								FluentList.empty()
-								))));
+				String packageFQN = JClassName.from(f.getTargetFQN()).getPackageName();
+				if (!proj.packageIsDefined(packageFQN)) {
+					proj.addPackage(new JPackage(proj, "",
+							FluentList.empty(), 
+							packageFQN, 
+							Optional.of(new JPackageMetadata(
+									FluentList.create(BuiltIn.CORE),
+									FluentList.empty()
+									))));
+				}
 				proj.addInterface(new JInterface(
 						proj,"",
 						FluentList.create( 
@@ -204,11 +205,6 @@ public class JavaFromCsvMojo extends AbstractMojo {
 						JClassName.from("java.lang.String"),
 						null,false
 						));
-				// Pass whole model to JModelWriter
-				JModelWriter writer = new JModelWriter();
-				writer.setTargetDirectory(targetDirectory);
-				writer.setModel(proj);
-				writer.writeSafe(); //TODO: THIS DOESN@T WORK
 			} catch (ParserException e) {
 				e.printStackTrace();
 				throw new MojoFailureException(e.getLocalizedMessage());
@@ -217,13 +213,18 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				throw new MojoFailureException(e.getLocalizedMessage());
 			}
 		}
+		// Pass whole model to JModelWriter
+		JModelWriter writer = new JModelWriter();
+		writer.setTargetDirectory(targetDirectory);
+		writer.setModel(proj);
+		writer.writeSafe(); //TODO: THIS DOESN'T WORK but is ignored
 	}
 
 	@Parameter(required=false)
 	File baseDirectory;
 
 	@Parameter(required=false)
-	String filenameFilter;
+	String filenameFilter = "*.csv";
 
 	@Parameter(required=false)
 	String defaultTargetPackage;
