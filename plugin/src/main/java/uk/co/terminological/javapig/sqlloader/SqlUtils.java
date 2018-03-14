@@ -12,12 +12,7 @@ public class SqlUtils {
 	public static String defunctionSql(String sql) {
 		sql = sql.trim();
 		if (sql.endsWith(";")) sql = sql.substring(0,sql.length()-1);
-		if (sql.toLowerCase().contains("where ")) {
-			sql = sql + " and 1=0;";
-		} else {
-			sql = sql + " where 1=0;";
-		}
-		return sql;
+		return "SELECT xxx.* FROM ("+sql+") xxx WHERE 1=0";
 	}
 	
 	public static Map<String,Class<?>> methodsFromResultSet(ResultSet rs) throws SQLException, ClassNotFoundException {
