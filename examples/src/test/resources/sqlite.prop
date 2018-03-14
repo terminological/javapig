@@ -1,0 +1,2 @@
+url=jdbc:sqlite:src/test/resources/test.db
+driver=org.sqlite.JDBC
