@@ -70,11 +70,12 @@ public class JavaFromCsvMojo extends AbstractMojo {
 				execution.setTargetFQN(ProxyMapWrapper.className(defaultTargetPackage,input.getName()));
 				executions.add(execution);
 			}
-	
-			if (javaFromCsvExecutions != null) {
-				executions.addAll(Arrays.asList(javaFromCsvExecutions));
-			}
 		}
+	
+		if (javaFromCsvExecutions != null) {
+			executions.addAll(Arrays.asList(javaFromCsvExecutions));
+		}
+		
 		for (JavaFromCsvExecution f: executions) {
 			try {
 

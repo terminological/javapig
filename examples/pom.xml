@@ -24,6 +24,7 @@
       		<groupId>org.xerial</groupId>
       		<artifactId>sqlite-jdbc</artifactId>
       		<version>3.7.2</version>
+      		<scope>test</scope>
     	</dependency>
 	</dependencies>
 	<build>
@@ -39,29 +40,55 @@
 						<goals>
 							<goal>javaFromCsv</goal>
 						</goals>
+						<configuration>
+							<defaultTargetPackage>uk.co.terminological.mimic2</defaultTargetPackage>
+							<defaultType>CSV</defaultType>
+							<filenameFilter>*.csv</filenameFilter>
+							<baseDirectory>src/test/resources</baseDirectory>
+							<javaFromCsvExecutions>
+								<javaFromCsvExecution>
+									<file>src/test/resources/LABEVENTS_50.csv</file>
+									<type>CSV</type>
+									<targetFQN>uk.co.terminological.mimic.LabEvent</targetFQN>
+								</javaFromCsvExecution>
+								<javaFromCsvExecution>
+									<file>src/test/resources/PATIENTS_50.csv</file>
+									<type>CSV</type>
+									<targetFQN>uk.co.terminological.mimic.Patient</targetFQN>
+								</javaFromCsvExecution>
+							</javaFromCsvExecutions>
+							<targetDirectory>src/test/java</targetDirectory>
+						</configuration>
+					</execution>
+					<execution>
+						<id>build-java-from-sql</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>javaFromSql</goal>
+						</goals>
+						<configuration>
+							<connectionProperties>src/test/resources/sqlite.prop</connectionProperties>
+							<targetDirectory>src/test/java</targetDirectory>
+							<!-- FOR SCANNING DIRECTORY FOR NAMED FILES: 
+							<baseDirectory>src/test/resources</baseDirectory>
+							<defaultTargetPackage>uk.co.terminological.fromsql</defaultTargetPackage>
+							<filenameFilter>*.sql</filenameFilter>
+							-->
+							<javaFromSqlExecutions>
+								<javaFromSqlExecution>
+									<sql>Select * from testTable</sql>
+									<targetFQN>uk.co.terminological.fromsql.TestTable</targetFQN>
+								</javaFromSqlExecution>
+							</javaFromSqlExecutions>
+						</configuration>
 					</execution>
 				</executions>
-				<configuration>
-					<defaultTargetPackage>uk.co.terminological.mimic2</defaultTargetPackage>
-					<defaultType>CSV</defaultType>
-					<filenameFilter>*.csv</filenameFilter>
-					<baseDirectory>src/test/resources</baseDirectory>
-					<javaFromCsvExecutions>
-						<javaFromCsvExecution>
-							<file>src/test/resources/LABEVENTS_50.csv</file>
-							<type>CSV</type>
-							<targetFQN>uk.co.terminological.mimic.LabEvent</targetFQN>
-						</javaFromCsvExecution>
-						<javaFromCsvExecution>
-							<file>src/test/resources/PATIENTS_50.csv</file>
-							<type>CSV</type>
-							<targetFQN>uk.co.terminological.mimic.Patient</targetFQN>
-						</javaFromCsvExecution>
-					</javaFromCsvExecutions>
-					<targetDirectory>src/test/java</targetDirectory>
-				</configuration>
 				<dependencies>
-					
+					<dependency>
+						<groupId>org.xerial</groupId>
+			      		<artifactId>sqlite-jdbc</artifactId>
+			      		<version>3.7.2</version>
+			    	</dependency>
 				</dependencies>
 			</plugin>
 			<plugin>

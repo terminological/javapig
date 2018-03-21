@@ -59,13 +59,17 @@ public class JavaFromSqlMojo extends AbstractMojo {
 		try {
 
 			prop =  new Properties();
+			System.out.println("Properties file: "+this.connectionProperties.getAbsolutePath());
 			prop.load(new FileInputStream(this.connectionProperties));
 
+			System.out.println("Driver: "+prop.getProperty("driver"));
+			System.out.println("Url: "+prop.getProperty("url"));
+			
 			Class.forName(prop.getProperty("driver"));
 			conn = DriverManager.getConnection(prop.getProperty("url"), prop);
 
 		} catch (Exception e) {
-			throw new MojoExecutionException("exception setting up database connection: "+e.getLocalizedMessage());
+			throw new MojoExecutionException("exception setting up database connection: "+e.getLocalizedMessage(), e);
 		}
 
 		if (baseDirectory != null && filenameFilter != null && defaultTargetPackage != null) {
@@ -84,22 +88,23 @@ public class JavaFromSqlMojo extends AbstractMojo {
 					throw new MojoFailureException(e.getLocalizedMessage());
 				}
 			}
-
-			if (javaFromSqlExecutions != null) {
-				executions.addAll(Arrays.asList(javaFromSqlExecutions));
-			}
 		}
 
+		if (javaFromSqlExecutions != null) {
+			executions.addAll(Arrays.asList(javaFromSqlExecutions));
+		}
+		
 		for (JavaFromSqlExecution f: executions) {
 
 
-			System.out.println("JavaFromCSV Execution: "+ f.getTargetFQN() + ": from "+ f.getSql());
+			System.out.println("JavaFromSQL Execution: "+ f.getTargetFQN() + ": from "+ f.getSql());
 
-			String sql = SqlUtils.defunctionSql(f.getSql());
+			String sql = f.getSql();
 			Statement st = null;
 			ResultSet rs = null;
 			try {
 				st = conn.createStatement();
+				st.setMaxRows(1);
 				rs = st.executeQuery(sql);
 
 				Map<String,Class<?>> methodSignatures = SqlUtils.methodsFromResultSet(rs);
@@ -140,7 +145,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 											FluentList.create(
 													new JAnnotationEntry(
 															JMethodName.from(Column.class.getCanonicalName()+"#value"),
-															JAnnotationValue.of(j))
+															JAnnotationValue.of(methodSignature.getKey()))
 													))),
 							JClassName.from(f.getTargetFQN()),
 							JMethodName.from(f.getTargetFQN()+"#"+ProxyMapWrapper.methodName(methodSignature.getKey())),
@@ -155,7 +160,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 						proj,"",
 						FluentList.create(new JAnnotation(Optional.of(Id.class.getCanonicalName()),"Id",FluentList.empty())),
 						JClassName.from(f.getTargetFQN()),
-						JMethodName.from(f.getTargetFQN()+"#getId"),
+						JMethodName.from(f.getTargetFQN()+"#getRowNumber"),
 						"java.lang.String",
 						JClassName.from("java.lang.String"),
 						null,false
