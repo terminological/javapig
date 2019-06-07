@@ -2,28 +2,28 @@ package uk.co.terminological.javapig.sqlloader;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
-public class JavaFromSqlExecution {
+public class JavaFromTable {
 
-	public String getSql() {
-		return sql;
-	}
-
-	public void setSql(String sql) {
-		this.sql = sql;
+	public String getName() {
+		return name;
 	}
 
 	public String getTargetFQN() {
 		return targetFQN;
 	}
 
-	public void setTargetFQN(String targetFQN) {
-		this.targetFQN = targetFQN;
-	}
-
 	@Parameter(required=true)
-	String sql;
+	String name;
 	
 	@Parameter(required=true)
 	String targetFQN;
+
+	protected void setName(String name) {
+		this.name = name;
+	}
+
+	protected void setTargetFQN(String targetFQN) {
+		this.targetFQN = targetFQN;
+	}
 	
 }

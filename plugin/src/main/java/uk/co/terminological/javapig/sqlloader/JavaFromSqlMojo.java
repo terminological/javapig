@@ -7,15 +7,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import javax.persistence.Id;
 
@@ -42,6 +42,9 @@ import uk.co.terminological.javapig.javamodel.JPackage;
 import uk.co.terminological.javapig.javamodel.JPackageMetadata;
 import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.scanner.ReflectionUtils;
+import uk.co.terminological.javapig.sqlloader.SqlUtils.ColumnDetail;
+import uk.co.terminological.javapig.sqlloader.SqlUtils.QueryDetail;
+import uk.co.terminological.javapig.sqlloader.SqlUtils.TableDetail;
 import uk.co.terminological.mappers.ProxyMapWrapper;
 
 @Mojo( name = "javaFromSql", defaultPhase = LifecyclePhase.GENERATE_SOURCES )
@@ -52,6 +55,8 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 		JProject proj = new JProject();
 		ArrayList<JavaFromSqlExecution> executions = new ArrayList<>();
+		ArrayList<JavaFromTable> tablesExec = new ArrayList<>();
+
 
 		Properties prop = null;
 		Connection conn = null;
@@ -64,7 +69,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 			System.out.println("Driver: "+prop.getProperty("driver"));
 			System.out.println("Url: "+prop.getProperty("url"));
-			
+
 			Class.forName(prop.getProperty("driver"));
 			conn = DriverManager.getConnection(prop.getProperty("url"), prop);
 
@@ -90,94 +95,145 @@ public class JavaFromSqlMojo extends AbstractMojo {
 			}
 		}
 
+		if (databases != null) {
+			Map<String, List<String>> tableNamesLookup;
+			try {
+				tableNamesLookup = SqlUtils.getDatabaseTables(conn);
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new MojoFailureException(e.getLocalizedMessage());
+			}
+			for(JavaFromDatabase database: databases) {
+				List<String> tableNames = tableNamesLookup.getOrDefault(database.getName(), Collections.emptyList());
+				for (String tableName: tableNames) {
+					JavaFromTable table = new JavaFromTable();
+					table.setName(tableName);
+					table.setTargetFQN(ProxyMapWrapper.className(database.getTargetPackage(),tableName));
+					tablesExec.add(table);
+				}
+			}
+		}
+
+		if (tables != null) {
+			tablesExec.addAll(Arrays.asList(tables));
+
+		}
+
 		if (javaFromSqlExecutions != null) {
 			executions.addAll(Arrays.asList(javaFromSqlExecutions));
 		}
-		
-		for (JavaFromSqlExecution f: executions) {
 
+		// SQL execution methods.
+
+		for (JavaFromSqlExecution f: executions) {
 
 			System.out.println("JavaFromSQL Execution: "+ f.getTargetFQN() + ": from "+ f.getSql());
 
-			String sql = f.getSql();
-			Statement st = null;
-			ResultSet rs = null;
+			QueryDetail methodSignatures;
 			try {
-				st = conn.createStatement();
-				st.setMaxRows(1);
-				rs = st.executeQuery(sql);
-
-				Map<String,Class<?>> methodSignatures = SqlUtils.methodsFromResultSet(rs);
-
-				//TODO methodSignatures from resultSetMetadata
-
-				String packageFQN = JClassName.from(f.getTargetFQN()).getPackageName();
-				if (!proj.packageIsDefined(packageFQN)) {
-					proj.addPackage(new JPackage(proj, "",
-							FluentList.empty(), 
-							packageFQN, 
-							Optional.of(new JPackageMetadata(
-									FluentList.create(BuiltIn.CORE),
-									FluentList.empty()
-									))));
-				}
-				proj.addInterface(new JInterface(
-						proj,"",
-						FluentList.create( 
-								new JAnnotation(
-										Optional.of(Sql.class.getCanonicalName()),
-										"Sql",
-										FluentList.create(
-												new JAnnotationEntry(
-														JMethodName.from(Sql.class.getCanonicalName()+"#value"),
-														JAnnotationValue.of(f.getSql()))
-												))),
-						JClassName.from(f.getTargetFQN()),
-						FluentSet.empty()));
-				int j=0;
-				for (Entry<String,Class<?>> methodSignature : methodSignatures.entrySet()) {
-					proj.addMethod(new JGetMethod(
-							proj,"",
-							FluentList.create( 
-									new JAnnotation(
-											Optional.of(Column.class.getCanonicalName()),
-											"Column",
-											FluentList.create(
-													new JAnnotationEntry(
-															JMethodName.from(Column.class.getCanonicalName()+"#value"),
-															JAnnotationValue.of(methodSignature.getKey()))
-													))),
-							JClassName.from(f.getTargetFQN()),
-							JMethodName.from(f.getTargetFQN()+"#"+ProxyMapWrapper.methodName(methodSignature.getKey())),
-							methodSignature.getValue().getCanonicalName(),
-							JClassName.from(ReflectionUtils.box(methodSignature.getValue()).getCanonicalName()),
-							null,
-							false
-							));
-					j++;
-				}
-				proj.addMethod(new JGetMethod(
-						proj,"",
-						FluentList.create(new JAnnotation(Optional.of(Id.class.getCanonicalName()),"Id",FluentList.empty())),
-						JClassName.from(f.getTargetFQN()),
-						JMethodName.from(f.getTargetFQN()+"#getRowNumber"),
-						"java.lang.String",
-						JClassName.from("java.lang.String"),
-						null,false
-						));
+				methodSignatures = SqlUtils.getQueryDetail(conn, f.getSql());
 			} catch (SQLException e) {
-				System.out.println("The SQL generated an error - skipping...");
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				throw new MojoExecutionException("SQL datatypes are not found on the class path");
-			} finally {
-				if (rs != null) try { rs.close(); } catch(Exception e) {}  
-				if (st != null) try { st.close(); } catch(Exception e) {}
+				throw new MojoExecutionException(e.getLocalizedMessage());
 			}
+
+			
+			String packageFQN = JClassName.from(f.getTargetFQN()).getPackageName();
+			if (!proj.packageIsDefined(packageFQN)) {
+				proj.addPackage(new JPackage(proj, "",
+						FluentList.empty(), 
+						packageFQN, 
+						Optional.of(new JPackageMetadata(
+								FluentList.create(BuiltIn.CORE),
+								FluentList.empty()
+								))));
+			}
+			List<Class<?>> parameterTypes = methodSignatures.getParameters().stream().map(p -> p.getClass()).collect(Collectors.toList());
+ 			proj.addInterface(new JInterface(
+					proj,"",
+					FluentList.create( 
+							new JAnnotation(
+									Optional.of(Query.class.getCanonicalName()),
+									"Query",
+									FluentList.create(
+											new JAnnotationEntry(
+													JMethodName.from(Query.class.getCanonicalName()+"#sql"),
+													JAnnotationValue.of(f.getSql())),
+											new JAnnotationEntry(
+													JMethodName.from(Query.class.getCanonicalName()+"#parameterTypes"),
+													JAnnotationValue.of(parameterTypes))
+											
+											))),
+					JClassName.from(f.getTargetFQN()),
+					FluentSet.empty()));
+			addColumnMethods(proj,methodSignatures.getColumns(),f.getTargetFQN());
+			proj.addMethod(new JGetMethod(
+					proj,"",
+					FluentList.create(new JAnnotation(Optional.of(Id.class.getCanonicalName()),"Id",FluentList.empty())),
+					JClassName.from(f.getTargetFQN()),
+					JMethodName.from(f.getTargetFQN()+"#getRowNumber"),
+					"java.lang.String",
+					JClassName.from("java.lang.String"),
+					null,false
+					));
 		}
+
+
+
+		/***********************************************************************/
+
+
+
 		
+
+		for (JavaFromTable t: tables) {
+
+
+			System.out.println("JavaFromSQL Table: "+ t.getTargetFQN() + ": from "+ t.getName());
+
+			TableDetail tableDetail;
+			try {
+				tableDetail = SqlUtils.getTableDetail(conn, t.getName());
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new MojoExecutionException(e.getLocalizedMessage());
+			}
+
+			String packageFQN = JClassName.from(t.getTargetFQN()).getPackageName();
+			if (!proj.packageIsDefined(packageFQN)) {
+				proj.addPackage(new JPackage(proj, "",
+						FluentList.empty(), 
+						packageFQN, 
+						Optional.of(new JPackageMetadata(
+								FluentList.create(BuiltIn.CORE),
+								FluentList.empty()
+								))));
+			}
+
+			proj.addInterface(new JInterface(
+					proj,"",
+					FluentList.create( 
+							new JAnnotation(
+									Optional.of(Table.class.getCanonicalName()),
+									"Table",
+									FluentList.create(
+											new JAnnotationEntry(
+													JMethodName.from(Table.class.getCanonicalName()+"#name"),
+													JAnnotationValue.of(tableDetail.getName())),
+											new JAnnotationEntry(
+													JMethodName.from(Table.class.getCanonicalName()+"#schema"),
+													JAnnotationValue.of(tableDetail.getSchema()))
+											))),
+					JClassName.from(t.getTargetFQN()),
+					FluentSet.empty()));
+			addColumnMethods(proj,tableDetail.getColumns(),t.getTargetFQN());
+
+		}
+
+		/***********************************************************************/
+
 		if (conn != null) try { conn.close(); } catch(Exception e) {} 
-		
+
 		// Pass whole model to JModelWriter
 		JModelWriter writer = new JModelWriter();
 		writer.setTargetDirectory(targetDirectory);
@@ -186,6 +242,49 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 
 	}
+
+	void addColumnMethods(JProject proj, List<ColumnDetail> methodSignatures, String targetFQN) {
+		for (ColumnDetail methodSignature : methodSignatures) {
+			proj.addMethod(new JGetMethod(
+					proj,"",
+					FluentList.create( 
+							new JAnnotation(
+									Optional.of(Column.class.getCanonicalName()),
+									"Column",
+									FluentList.create(
+											new JAnnotationEntry(
+													JMethodName.from(Column.class.getCanonicalName()+"#name"),
+													JAnnotationValue.of(methodSignature.getColumnLabel())
+													),
+											new JAnnotationEntry(
+													JMethodName.from(Column.class.getCanonicalName()+"#jdbcType"),
+													JAnnotationValue.of(methodSignature.getJDBCType())
+													),
+											new JAnnotationEntry(
+													JMethodName.from(Column.class.getCanonicalName()+"#length"),
+													JAnnotationValue.of(methodSignature.getLength())
+													),
+											new JAnnotationEntry(
+													JMethodName.from(Column.class.getCanonicalName()+"#isNullable"),
+													JAnnotationValue.of(methodSignature.isNullable())
+													),
+											new JAnnotationEntry(
+													JMethodName.from(Column.class.getCanonicalName()+"#isAutoIncrement"),
+													JAnnotationValue.of(methodSignature.isAutoIncrement())
+													)
+											))),
+					JClassName.from(targetFQN),
+					JMethodName.from(targetFQN+"#"+ProxyMapWrapper.methodName(methodSignature.getColumnLabel())),
+					//TODO: Optionals if isNullable?
+					methodSignature.getJavaType().getCanonicalName(),
+					JClassName.from(ReflectionUtils.box(methodSignature.getJavaType()).getCanonicalName()),
+					null,
+					false
+					));
+		}
+	}
+
+
 
 	@Parameter(required=false)
 	File baseDirectory;
@@ -201,6 +300,12 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 	@Parameter(required=false)
 	JavaFromSqlExecution[] javaFromSqlExecutions;
+
+	@Parameter(required=false)
+	JavaFromTable[] tables;
+
+	@Parameter(required=false)
+	JavaFromDatabase[] databases;
 
 	@Parameter(required=true)
 	File targetDirectory;

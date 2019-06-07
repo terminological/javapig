@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
-public @interface Sql {
-	String value();
+public @interface Table {
+	String name();
+	String schema();
 }
