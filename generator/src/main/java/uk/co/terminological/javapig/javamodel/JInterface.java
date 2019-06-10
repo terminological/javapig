@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The interface describes the basic class structure of the overall model. It provides functions to access the methods of the model
@@ -71,9 +72,13 @@ public class JInterface extends JElement implements JTemplateInput  {
 	public List<String> getImportsIncludingAnnotations() {
 		Set<String> additional = new HashSet<>();
 		this.getAnnotations().forEach(ann -> additional.addAll(ann.getImports()));
+		//TODO: chase down null annotation.
 		this.getMethods().forEach(me ->
 			me.getAnnotations().forEach(ann -> additional.addAll(ann.getImports())));
-		return getImports(additional.toArray(new String[] {}));
+		return getImports(
+				additional.stream().filter(s -> s != null).collect(Collectors.toList()).toArray(new String[] {})
+				
+				);
 	}
 	
 	/**

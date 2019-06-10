@@ -4,7 +4,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 
@@ -19,10 +21,10 @@ public class SqlInterface extends JInterface {
 	 * otherwise returns null.
 	 * @return
 	 */
-	public Set<JGetMethod> getColumns() {
-		return this.getModel().getMethods().stream().filter(m -> m.declaredBy(this))
+	public List<JGetMethod> getColumns() {
+		return this.getMethods().stream()
 			.filter(m -> m.isAnnotationPresent(Column.class))
-			.collect(Collectors.toSet());
+			.collect(Collectors.toList());
 	}
 	
 	public boolean isQueryBound() {
@@ -43,8 +45,10 @@ public class SqlInterface extends JInterface {
 			return this.getAnnotation(Query.class).sql();
 		}
 		
-		public List<Class<?>> getParameterTypes() {
-			return Arrays.asList(this.getAnnotation(Query.class).parameterTypes());
+		public List<JClassName> getParameterTypes() {
+			return Stream.of(this.getAnnotation(Query.class).parameterTypes())
+					.map(c -> JClassName.from(c.getCanonicalName()))
+					.collect(Collectors.toList());
 		}
 		
 	}

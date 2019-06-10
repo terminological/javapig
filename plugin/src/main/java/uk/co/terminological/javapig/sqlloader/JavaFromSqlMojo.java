@@ -54,7 +54,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
 		JProject proj = new JProject();
-		ArrayList<JavaFromSqlExecution> executions = new ArrayList<>();
+		ArrayList<JavaFromQuery> executions = new ArrayList<>();
 		ArrayList<JavaFromTable> tablesExec = new ArrayList<>();
 
 
@@ -83,7 +83,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 			for (File input: inputs) {
 				try {
-					JavaFromSqlExecution execution = new JavaFromSqlExecution();
+					JavaFromQuery execution = new JavaFromQuery();
 					String sql = new String(Files.readAllBytes(input.toPath()));
 					execution.setSql(sql);
 					execution.setTargetFQN(ProxyMapWrapper.className(defaultTargetPackage,input.getName()));
@@ -95,7 +95,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 			}
 		}
 
-		if (databases != null) {
+		if (javaFromDatabases != null) {
 			Map<String, List<String>> tableNamesLookup;
 			try {
 				tableNamesLookup = SqlUtils.getDatabaseTables(conn);
@@ -103,7 +103,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 				e.printStackTrace();
 				throw new MojoFailureException(e.getLocalizedMessage());
 			}
-			for(JavaFromDatabase database: databases) {
+			for(JavaFromDatabase database: javaFromDatabases) {
 				List<String> tableNames = tableNamesLookup.getOrDefault(database.getName(), Collections.emptyList());
 				for (String tableName: tableNames) {
 					JavaFromTable table = new JavaFromTable();
@@ -114,18 +114,17 @@ public class JavaFromSqlMojo extends AbstractMojo {
 			}
 		}
 
-		if (tables != null) {
-			tablesExec.addAll(Arrays.asList(tables));
-
+		if (javaFromTables != null) {
+			tablesExec.addAll(Arrays.asList(javaFromTables));
 		}
 
-		if (javaFromSqlExecutions != null) {
-			executions.addAll(Arrays.asList(javaFromSqlExecutions));
+		if (javaFromQueries != null) {
+			executions.addAll(Arrays.asList(javaFromQueries));
 		}
 
 		// SQL execution methods.
 
-		for (JavaFromSqlExecution f: executions) {
+		for (JavaFromQuery f: executions) {
 
 			System.out.println("JavaFromSQL Execution: "+ f.getTargetFQN() + ": from "+ f.getSql());
 
@@ -148,7 +147,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 								FluentList.empty()
 								))));
 			}
-			List<Class<?>> parameterTypes = methodSignatures.getParameters().stream().map(p -> p.getClass()).collect(Collectors.toList());
+			List<Class<?>> parameterTypes = methodSignatures.getParameters().stream().map(p -> p.getJavaType()).collect(Collectors.toList());
  			proj.addInterface(new JInterface(
 					proj,"",
 					FluentList.create( 
@@ -172,8 +171,8 @@ public class JavaFromSqlMojo extends AbstractMojo {
 					FluentList.create(new JAnnotation(Optional.of(Id.class.getCanonicalName()),"Id",FluentList.empty())),
 					JClassName.from(f.getTargetFQN()),
 					JMethodName.from(f.getTargetFQN()+"#getRowNumber"),
-					"java.lang.String",
-					JClassName.from("java.lang.String"),
+					"java.lang.Integer",
+					JClassName.from("java.lang.Integer"),
 					null,false
 					));
 		}
@@ -186,7 +185,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 		
 
-		for (JavaFromTable t: tables) {
+		for (JavaFromTable t: tablesExec) {
 
 
 			System.out.println("JavaFromSQL Table: "+ t.getTargetFQN() + ": from "+ t.getName());
@@ -299,13 +298,13 @@ public class JavaFromSqlMojo extends AbstractMojo {
 	File connectionProperties;
 
 	@Parameter(required=false)
-	JavaFromSqlExecution[] javaFromSqlExecutions;
+	JavaFromQuery[] javaFromQueries;
 
 	@Parameter(required=false)
-	JavaFromTable[] tables;
+	JavaFromTable[] javaFromTables;
 
 	@Parameter(required=false)
-	JavaFromDatabase[] databases;
+	JavaFromDatabase[] javaFromDatabases;
 
 	@Parameter(required=true)
 	File targetDirectory;
@@ -335,12 +334,12 @@ public class JavaFromSqlMojo extends AbstractMojo {
 	}
 
 
-	public JavaFromSqlExecution[] getJavaFromSqlExecutions() {
-		return javaFromSqlExecutions;
+	public JavaFromQuery[] getJavaFromSqlExecutions() {
+		return javaFromQueries;
 	}
 
-	public void setJavaFromSqlExecutions(JavaFromSqlExecution[] JavaFromSqlExecutions) {
-		this.javaFromSqlExecutions = JavaFromSqlExecutions;
+	public void setJavaFromSqlExecutions(JavaFromQuery[] JavaFromSqlExecutions) {
+		this.javaFromQueries = JavaFromSqlExecutions;
 	}
 
 	public File getTargetDirectory() {

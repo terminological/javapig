@@ -182,7 +182,9 @@ public class StringCaster {
 
 			} else if (Class.class.isAssignableFrom(fieldClazz)) {
 				try {
-					return (X) fieldClazz.getClassLoader().loadClass(string);
+					if (string.startsWith("class ")) 
+							string = string.substring("class ".length());
+					return (X) Thread.currentThread().getContextClassLoader().loadClass(string);
 				} catch (ClassNotFoundException e) {
 					throw new ClassCastException("No class found for: "+string);
 				}

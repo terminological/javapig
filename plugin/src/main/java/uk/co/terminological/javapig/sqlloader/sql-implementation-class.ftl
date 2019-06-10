@@ -3,35 +3,41 @@
 package ${packagename};
 
 import javax.annotation.Generated;
-import ${rootPackage}.Indexes;
-<#list class.getImports("java.util.Map","java.util.HashMap") as import>
+<#list class.getImports() as import>
 import ${import};
+</#list>
 import java.sql.ResultSet;
 import java.sql.SQLException;
-</#list>
 
 // TODO: this does not use Optionals (which it could) for nullable values
 // this would need a change in the JavaFromSqlMojo also
 
 @Generated({"uk.co.terminological.javapig.JModelWriter"})
-public class ${classname} implements ${sn} {
+public class ${classname} extends ${sn}FluentImpl implements ${sn} {
 
-	// Fields
+	<#-- // Fields
 	// ======
 
 	private Map<String,Object> sqlInput;
+	private Integer row; -->
 
 	// Public constructor
 	// ==================
 
 	public ${classname}(ResultSet resultSet) throws SQLException {
-		sqlInput = new HashMap<>();
+		<#-- sqlInput = new HashMap<>();-->
+		super(
 		<#list class.getColumns() as method>
-		sqlInput.put("${method.getColumnName()}",resultSet.getObject(${method.getColumnName()},${method.getInterfaceType()}.class));
+		<#-- sqlInput.put("${method.getColumnName()}",resultSet.getObject("${method.getColumnName()}",${method.getInterfaceType()}.class)); -->
+			resultSet.getObject("${method.getColumnName()}",${method.getInterfaceType()}.class)<#sep>,
+			</#sep>
 		</#list>
+			<#if class.isQueryBound()>,
+			resultSet.getRow()</#if>
+		);
 	}
 	
-	// POJO Getters
+	<#--// POJO Getters
 	// ============
 
 	<#list class.getColumns() as method>
@@ -39,6 +45,10 @@ public class ${classname} implements ${sn} {
 		return (${method.getInterfaceType()}) sqlInput.get("${method.getColumnName()}");
 	}
 	</#list> 
+	
+	public Integer getRowNumber() {
+		return row;
+	}
 	
 	// hashCode and equals
 	// ===================
@@ -58,4 +68,8 @@ public class ${classname} implements ${sn} {
 		return this.sqlInput.equals(other.sqlInput);
 	}
 	
+	@Override
+	public String toString() {
+		return "row: "+row+"="+sqlInput.toString();
+	}-->
 }

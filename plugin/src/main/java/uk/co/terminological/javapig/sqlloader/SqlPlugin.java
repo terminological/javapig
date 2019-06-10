@@ -1,6 +1,7 @@
 package uk.co.terminological.javapig.sqlloader;
 
 import uk.co.terminological.javapig.annotations.Scope;
+import uk.co.terminological.javapig.csvloader.CsvInterface;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JModelAdaptor;
@@ -19,7 +20,7 @@ public abstract class SqlPlugin extends JModelCopier implements JModelAdaptor {
 	public SqlInterface map(JInterface in) {
 		if (in.isAnnotationPresent(Query.class)) return new SqlInterface.QueryBound(in);
 		if (in.isAnnotationPresent(Table.class)) return new SqlInterface.TableBound(in);
-		throw new RuntimeException();
+		return new SqlInterface(in);
 	}
 	
 	@Override
@@ -29,11 +30,14 @@ public abstract class SqlPlugin extends JModelCopier implements JModelAdaptor {
 
 	@Override
 	public boolean filter(JTemplateInput input) {
-		/*if (input instanceof IndexableInterface) {
-			return ((IndexableInterface) input).hasIdentifier();
-		} else {*/
+		if (input instanceof SqlInterface) {
+			return 
+					((SqlInterface) input).isQueryBound() ||
+					((SqlInterface) input).isTableBound()
+					;
+		} else {
 			return true;
-		//}
+		}
 	}
 
 	public static class Model extends SqlPlugin {
@@ -50,7 +54,7 @@ public abstract class SqlPlugin extends JModelCopier implements JModelAdaptor {
 
 		@Override
 		public String getClassNameTemplate() {
-			return "${rootPackage}.SqlReader";
+			return "${rootPackage}.Database";
 		}
 
 		@Override

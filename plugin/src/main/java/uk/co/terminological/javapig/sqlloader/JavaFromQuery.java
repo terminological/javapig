@@ -2,7 +2,7 @@ package uk.co.terminological.javapig.sqlloader;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
-public class JavaFromSqlExecution {
+public class JavaFromQuery {
 
 	public String getSql() {
 		return sql;
@@ -26,4 +26,6 @@ public class JavaFromSqlExecution {
 	@Parameter(required=true)
 	String targetFQN;
 	
+	// TODO: default values and explicit sqltypes for parameterised queries.
+	// At the moment the parameter data is 
 }

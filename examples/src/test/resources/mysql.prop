@@ -1,0 +1,2 @@
+url=jdbc:mysql://localhost/MIMIC?user=newuser&password=newuser
+driver=com.mysql.cj.jdbc.Driver

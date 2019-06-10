@@ -21,8 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * @see #ReflectionJModelBuilder
@@ -322,11 +328,13 @@ public class ReflectionUtils {
 			if (method.getReturnType().isArray()) {
 				Object[] tmp = (Object[]) method.invoke(annotation);
 				out.append("{");
-				boolean first = false;
-				for (Object v: tmp) {
-					if (!first) out.append(",");
-					out.append(this.convertValue(v));
-					first = false;
+				if (tmp != null) {
+					boolean first = true;
+					for (Object v: tmp) {
+						if (!first) out.append(",");
+						out.append(this.convertValue(v));
+						first = false;
+					}
 				}
 				out.append("}");
 			} else {
@@ -335,6 +343,7 @@ public class ReflectionUtils {
 			return out.toString();
 		};
 
+		//TODO: This doesn;t handle lists???
 		private String convertValue(Object o) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 			if (o instanceof Class) {
 				return ((Class<?>) o).getName()+".class";
@@ -404,4 +413,58 @@ public class ReflectionUtils {
 		else throw new ClassCastException("Not a primitive type "+primitiveType.getCanonicalName());
 	}
 
+	public static String gettersToString(Object o, int level) {
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		String json = gson.toJson(recurseToString(o,level)); 
+		return json;
+	}
+	
+	public static String gettersToString(Object o) {
+		return gettersToString(o,0);
+	}
+	
+	private static Map<String,Object> recurseToString(Object o, int level) {
+		Map<String,Object> out = new HashMap<>();
+		Class<?> tmpClazz = o.getClass();
+		if (tmpClazz.isAnonymousClass()) tmpClazz = tmpClazz.getInterfaces()[0];
+		for (Method m:tmpClazz.getMethods()) {
+			if (m.getName().startsWith("get")) {
+				try {
+					Object tmp = m.invoke(o);
+					if (tmp==null) out.put(m.getName(), null);
+					Class<?> tmpTmpClazz = tmp.getClass();
+					if (tmpTmpClazz.isAnonymousClass()) tmpTmpClazz = tmpTmpClazz.getInterfaces()[0];
+					if (isCollectionType(tmpTmpClazz)) {
+						if (level == 0 || tmpTmpClazz.getCanonicalName().startsWith("java")) out.put(m.getName(), collect(iterable(tmp,t -> failsafeToString(t))));
+						else {
+							out.put(m.getName(), collect(iterable(tmp,t -> recurseToString(t,level-1))));
+							//TODO: this is not quite working as desired - prints the name of a class rather than recursing
+						}
+					} else {
+						if (level==0 || tmpTmpClazz.getCanonicalName().startsWith("java")) out.put(m.getName(), failsafeToString(tmp));
+						else out.put(m.getName(), recurseToString(tmp,level-1));
+					}
+				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+					out.put(m.getName(), e.getClass().getSimpleName());
+				}
+			}
+		}
+		return out;
+	}
+
+	private static String failsafeToString(Object tmp) {
+		if (tmp == null) return "null";
+		if (tmp.getClass().isAnonymousClass()) {
+			return Stream.of(tmp.getClass().getInterfaces()).map(i -> i.getCanonicalName()).collect(Collectors.joining(";"));
+		}
+		try {
+			return tmp.toString();
+		} catch (Exception e) {
+			return "unknown object";
+		}
+	}
+	
+	private static <X> List<X> collect(Iterable<X> it) {
+		return StreamSupport.stream(it.spliterator(),false).collect(Collectors.toList());
+	}
 }

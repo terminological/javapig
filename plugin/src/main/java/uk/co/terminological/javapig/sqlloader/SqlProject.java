@@ -34,12 +34,12 @@ public class SqlProject extends JProject {
 					.collect(Collectors.toSet());
 	}
 	
-	public Set<SqlInterface.QueryBound> getTables() {
+	public Set<SqlInterface.TableBound> getTables() {
 		return this.getClasses().stream()
 				.filter(
-						m -> m.isAnnotationPresent(Query.class)
+						m -> m.isAnnotationPresent(Table.class)
 					)
-					.map(c -> (SqlInterface.QueryBound) c)
+					.map(c -> (SqlInterface.TableBound) c)
 					.collect(Collectors.toSet());
 	}
 	
