@@ -5,7 +5,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 public class JavaFromQuery {
 
 	public String getSql() {
-		return sql;
+		return sql.replaceAll("\r\n|\r|\n", "");
 	}
 
 	public void setSql(String sql) {

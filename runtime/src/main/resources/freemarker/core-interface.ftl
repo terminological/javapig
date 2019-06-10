@@ -3,7 +3,7 @@
 <#assign fqn>${class.getName().getCanonicalName()}</#assign>
 package ${packagename};
 
-// import javax.annotation.Generated;
+import javax.annotation.Generated;
 <#list class.getImportsIncludingAnnotations() as import>
 import ${import};
 </#list>
@@ -13,7 +13,7 @@ import ${superTypeName.getCanonicalName};
 
 import ${fqn};
 
-// @Generated({"uk.co.terminological.javapig.JModelWriter"})
+@Generated({"uk.co.terminological.javapig.JModelWriter"})
 <@c.copyAnnotations class 0/>
 public interface ${class.getName().getSimpleName()}<#list class.getSupertypes() as supertypeName><#if supertypeName?is_first> extends <#else>, </#if>${supertypeName.getSimpleName()}</#list>  {
 

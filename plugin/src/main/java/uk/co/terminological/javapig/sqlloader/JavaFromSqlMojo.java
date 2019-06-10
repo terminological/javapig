@@ -143,8 +143,11 @@ public class JavaFromSqlMojo extends AbstractMojo {
 						FluentList.empty(), 
 						packageFQN, 
 						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE),
-								FluentList.empty()
+								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL),
+								FluentList.create(
+										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
+										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
+										)
 								))));
 			}
 			List<Class<?>> parameterTypes = methodSignatures.getParameters().stream().map(p -> p.getJavaType()).collect(Collectors.toList());
@@ -204,8 +207,11 @@ public class JavaFromSqlMojo extends AbstractMojo {
 						FluentList.empty(), 
 						packageFQN, 
 						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE),
-								FluentList.empty()
+								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL),
+								FluentList.create(
+										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
+										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
+										)
 								))));
 			}
 
@@ -348,6 +354,38 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 	public void setTargetDirectory(File targetDirectory) {
 		this.targetDirectory = targetDirectory;
+	}
+
+	public String getFilenameFilter() {
+		return filenameFilter;
+	}
+
+	public void setFilenameFilter(String filenameFilter) {
+		this.filenameFilter = filenameFilter;
+	}
+
+	public JavaFromQuery[] getJavaFromQueries() {
+		return javaFromQueries;
+	}
+
+	public void setJavaFromQueries(JavaFromQuery[] javaFromQueries) {
+		this.javaFromQueries = javaFromQueries;
+	}
+
+	public JavaFromTable[] getJavaFromTables() {
+		return javaFromTables;
+	}
+
+	public void setJavaFromTables(JavaFromTable[] javaFromTables) {
+		this.javaFromTables = javaFromTables;
+	}
+
+	public JavaFromDatabase[] getJavaFromDatabases() {
+		return javaFromDatabases;
+	}
+
+	public void setJavaFromDatabases(JavaFromDatabase[] javaFromDatabases) {
+		this.javaFromDatabases = javaFromDatabases;
 	}
 
 

@@ -235,7 +235,7 @@ public class SqlUtils {
 		// PreparedStatement pstmt = con.prepareStatement(sql);
 		ResultSetMetaData rsm = rs.getMetaData(); //pstmt.getMetaData();
 		String schema = rsm.getSchemaName(1);
-		String table = rsm.getTableName(1);
+		String table = rsm.getTableName(1).equals("") ? tablename : rsm.getTableName(1);
 		List<ColumnDetail> columns = columnsFromMetadata(rsm);
 
 		if (pstmt != null) try { pstmt.close(); } catch(Exception e) {}

@@ -33,6 +33,7 @@ import uk.co.terminological.datatypes.FluentSet;
 import uk.co.terminological.datatypes.Triple;
 import uk.co.terminological.javapig.JModelWriter;
 import uk.co.terminological.javapig.annotations.BuiltIn;
+import uk.co.terminological.javapig.index.IndexablePlugin;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
 import uk.co.terminological.javapig.javamodel.JAnnotationEntry;
 import uk.co.terminological.javapig.javamodel.JAnnotationValue;
@@ -158,8 +159,13 @@ public class JavaFromCsvMojo extends AbstractMojo {
 							FluentList.empty(), 
 							packageFQN, 
 							Optional.of(new JPackageMetadata(
-									FluentList.create(BuiltIn.CORE),
-									FluentList.empty()
+									FluentList.create(BuiltIn.CORE, BuiltIn.IMPL),
+									FluentList.create(
+											"uk.co.terminological.javapig.index.IndexablePlugin$Model",
+											"uk.co.terminological.javapig.index.IndexablePlugin$Interface",
+											"uk.co.terminological.javapig.csvloader.CsvPlugin$Factory",
+											"uk.co.terminological.javapig.csvloader.CsvPlugin$POJO"
+											)
 									))));
 				}
 				proj.addInterface(new JInterface(
