@@ -40,9 +40,43 @@ public class ${classname} {
 		}
 	}
 	
-	private static <T extends Object> Stream<T> streamOf(Iterator<T> av) {
-		Iterable<T> iterable = () -> av;
+	/*************** RESULT SET UTILITY FUNCTIONS **************************/
+	
+	private static interface FunctionWithException<T, R, E extends Exception> {
+		R apply(T t) throws E;
+	}
+	
+	private static <X, E extends Exception> Stream<X> streamResultSet(ResultSet rs, FunctionWithException<ResultSet,X, E> mapper) {
+		Iterable<X> iterable = () -> iterateResultSet(rs,mapper);
 		return StreamSupport.stream(iterable.spliterator(), false);
+	}
+	
+	private static <X, E extends Exception> Iterator<X> iterateResultSet(ResultSet rs, FunctionWithException<ResultSet,X,E> mapper) {
+		return new Iterator<X>() {
+
+			X out = null;
+			@Override
+			public boolean hasNext() {
+				try {
+					if (out == null) {
+						boolean ready = rs.next();
+						if (ready) out = mapper.apply(rs);
+					}
+				} catch (Exception e) {
+					out = null;
+				} 
+				return out != null;
+			}
+
+			@Override
+			public X next() {
+				if (!hasNext()) throw new NoSuchElementException();
+				X tmp = out;
+				out = null;
+				return tmp;
+			}
+			
+		};
 	}
 	
 	/*************** TABLE READERS **************************/
@@ -77,36 +111,18 @@ public class ${classname} {
 		public Iterator<${sn}> from${sn}(int limit) throws SQLException {
 			if (limit >= 0) pst${sn}.setMaxRows(limit);
     		ResultSet rs = pst${sn}.executeQuery();
-    		return new Iterator<${sn}>() {
-				@Override
-				public boolean hasNext() {
-					try {
-						return !rs.isLast();
-					} catch (SQLException e) {
-						return false;
-					}
-				}
-
-				@Override
-				public ${sn} next() {
-					if (!hasNext()) throw new NoSuchElementException();
-					try {
-						rs.next();
-						return new ${sn}Sql(rs);
-					} catch (SQLException e) {
-						throw new NoSuchElementException(e.getMessage());
-					}
-				}
-			};
+    		return iterateResultSet(rs,r -> new ${sn}Sql(rs));
     	}
 	
 	
 		public Stream<${sn}> stream${sn}() throws SQLException {
-			return streamOf(from${sn}());
+			return stream${sn}(0);
 		}
 		
 		public Stream<${sn}> stream${sn}(int limit) throws SQLException {
-			return streamOf(from${sn}(limit));
+			if (limit >= 0) pst${sn}.setMaxRows(limit);
+    		ResultSet rs = pst${sn}.executeQuery();
+    		return streamResultSet(rs,r -> new ${sn}Sql(rs));
 		}
 </#list>
 	}
@@ -217,31 +233,15 @@ public class ${classname} {
     		pst${sn}.setObject(${param?index+1}, param${param?index+1});
     </#list>		
     		ResultSet rs = pst${sn}.executeQuery();
-			return new Iterator<${sn}>() {
-				@Override
-				public boolean hasNext() {
-					try {
-						return !rs.isLast();
-					} catch (SQLException e) {
-						return false;
-					}
-				}
-
-				@Override
-				public ${sn} next() {
-					if (!hasNext()) throw new NoSuchElementException();
-					try {
-						rs.next();
-						return new ${sn}Sql(rs);
-					} catch (SQLException e) {
-						throw new NoSuchElementException(e.getMessage());
-					}
-				}
-			}; 
+    		return iterateResultSet(rs,r -> new ${sn}Sql(rs));
     	}
 	
 		public Stream<${sn}> stream${sn}(<#list class.getParameterTypes() as param>${param.getSimpleName()} param${param?index+1}<#sep>, <#sep></#list>) throws SQLException {
-			return streamOf(from${sn}(<#list class.getParameterTypes() as param>param${param?index+1}<#sep>, <#sep></#list>));
+			<#list class.getParameterTypes() as param>
+    		pst${sn}.setObject(${param?index+1}, param${param?index+1});
+    </#list>		
+    		ResultSet rs = pst${sn}.executeQuery();
+    		return streamResultSet(rs,r -> new ${sn}Sql(rs));
 		}
 	
 </#list>

@@ -15,3 +15,5 @@ public @interface Column {
 	boolean isAutoIncrement() default false;
 	boolean isNullable() default true;
 }
+
+//TODO: primary key https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getPrimaryKeys(java.lang.String,%20java.lang.String,%20java.lang.String)

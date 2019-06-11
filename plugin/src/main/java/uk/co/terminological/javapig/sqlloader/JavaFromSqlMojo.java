@@ -19,7 +19,10 @@ import java.util.stream.Collectors;
 
 import javax.persistence.Id;
 
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -84,8 +87,18 @@ public class JavaFromSqlMojo extends AbstractMojo {
 			for (File input: inputs) {
 				try {
 					JavaFromQuery execution = new JavaFromQuery();
-					String sql = new String(Files.readAllBytes(input.toPath()));
-					execution.setSql(sql);
+					String sql;
+					BOMInputStream bomIn = new BOMInputStream(Files.newInputStream(input.toPath()),
+							ByteOrderMark.UTF_8,
+							ByteOrderMark.UTF_16LE, ByteOrderMark.UTF_16BE,
+							ByteOrderMark.UTF_32LE, ByteOrderMark.UTF_32BE
+							);
+					if (bomIn.hasBOM() == false) {
+						sql = IOUtils.toString(bomIn);
+					} else {
+						sql = IOUtils.toString(bomIn, bomIn.getBOMCharsetName());
+					}
+					execution.setSql(sql.trim());
 					execution.setTargetFQN(ProxyMapWrapper.className(defaultTargetPackage,input.getName()));
 					executions.add(execution);
 				} catch (IOException e) {
@@ -126,7 +139,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 		for (JavaFromQuery f: executions) {
 
-			System.out.println("JavaFromSQL Execution: "+ f.getTargetFQN() + ": from "+ f.getSql());
+			System.out.println("JavaFromSQL Execution: "+ f.getTargetFQN() + ": from '"+ f.getSql()+"'");
 
 			QueryDetail methodSignatures;
 			try {
@@ -136,14 +149,14 @@ public class JavaFromSqlMojo extends AbstractMojo {
 				throw new MojoExecutionException(e.getLocalizedMessage());
 			}
 
-			
+
 			String packageFQN = JClassName.from(f.getTargetFQN()).getPackageName();
 			if (!proj.packageIsDefined(packageFQN)) {
 				proj.addPackage(new JPackage(proj, "",
 						FluentList.empty(), 
 						packageFQN, 
 						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL),
+								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL, BuiltIn.FACTORY),
 								FluentList.create(
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
@@ -151,7 +164,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 								))));
 			}
 			List<Class<?>> parameterTypes = methodSignatures.getParameters().stream().map(p -> p.getJavaType()).collect(Collectors.toList());
- 			proj.addInterface(new JInterface(
+			proj.addInterface(new JInterface(
 					proj,"",
 					FluentList.create( 
 							new JAnnotation(
@@ -164,7 +177,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 											new JAnnotationEntry(
 													JMethodName.from(Query.class.getCanonicalName()+"#parameterTypes"),
 													JAnnotationValue.of(parameterTypes))
-											
+
 											))),
 					JClassName.from(f.getTargetFQN()),
 					FluentSet.empty()));
@@ -186,7 +199,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 
 
 
-		
+
 
 		for (JavaFromTable t: tablesExec) {
 
@@ -207,7 +220,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 						FluentList.empty(), 
 						packageFQN, 
 						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL),
+								FluentList.create(BuiltIn.CORE, BuiltIn.IMPL),
 								FluentList.create(
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"

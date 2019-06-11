@@ -6,6 +6,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import edu.emory.mathcs.backport.java.util.Collections;
+import uk.co.terminological.datatypes.FluentList;
 import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
@@ -46,6 +48,7 @@ public class SqlInterface extends JInterface {
 		}
 		
 		public List<JClassName> getParameterTypes() {
+			if (this.getAnnotation(Query.class).parameterTypes() == null) return FluentList.empty();
 			return Stream.of(this.getAnnotation(Query.class).parameterTypes())
 					.map(c -> JClassName.from(c.getCanonicalName()))
 					.collect(Collectors.toList());

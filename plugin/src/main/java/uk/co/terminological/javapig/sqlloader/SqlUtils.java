@@ -14,8 +14,13 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import uk.co.terminological.javapig.StringCaster;
 
@@ -383,5 +388,41 @@ public class SqlUtils {
 		}
 		return columns;
 
+	}
+	
+	public static interface FunctionWithException<T, R, E extends Exception> {
+		R apply(T t) throws E;
+	}
+	
+	public static <X, E extends Exception> Stream<X> streamResultSet(ResultSet rs, FunctionWithException<ResultSet,X, E> mapper) {
+		Iterable<X> iterable = () -> iterateResultSet(rs,mapper);
+		return StreamSupport.stream(iterable.spliterator(), false);
+	}
+	
+	public static <X, E extends Exception> Iterator<X> iterateResultSet(ResultSet rs, FunctionWithException<ResultSet,X,E> mapper) {
+		return new Iterator<X>() {
+
+			boolean ready = false;
+			X out = null;
+			@Override
+			public boolean hasNext() {
+				try {
+					if (!ready) {
+						ready = rs.next();
+						out = mapper.apply(rs);
+					}
+				} catch (Exception e) {
+					ready = false;
+				} 
+				return ready;
+			}
+
+			@Override
+			public X next() {
+				if (!hasNext()) throw new NoSuchElementException();
+				return out;
+			}
+			
+		};
 	}
 }
