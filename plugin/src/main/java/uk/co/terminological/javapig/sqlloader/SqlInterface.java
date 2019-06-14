@@ -19,13 +19,24 @@ public class SqlInterface extends JInterface {
 	}
 
 	/** 
-	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.sqlloader.Query} then this returns that method
+	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.sqlloader.Column} then this returns that method
 	 * otherwise returns null.
 	 * @return
 	 */
 	public List<JGetMethod> getColumns() {
 		return this.getMethods().stream()
 			.filter(m -> m.isAnnotationPresent(Column.class))
+			.collect(Collectors.toList());
+	}
+	
+	/** 
+	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.sqlloader.Column} and that are
+	 * not marked as autoincrement.
+	 * @return
+	 */
+	public List<JGetMethod> getWriteColumns() {
+		return this.getMethods().stream()
+			.filter(m -> m.isAnnotationPresent(Column.class) && !m.getAnnotation(Column.class).isAutoIncrement())
 			.collect(Collectors.toList());
 	}
 	

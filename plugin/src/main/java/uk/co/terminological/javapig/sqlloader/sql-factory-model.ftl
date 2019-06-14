@@ -11,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 
 <#list model.getSqlClasses() as class>
 import ${class.getName().getCanonicalName()};
@@ -48,7 +49,13 @@ public class ${classname} {
 	
 	private static <X, E extends Exception> Stream<X> streamResultSet(ResultSet rs, FunctionWithException<ResultSet,X, E> mapper) {
 		Iterable<X> iterable = () -> iterateResultSet(rs,mapper);
-		return StreamSupport.stream(iterable.spliterator(), false);
+		return StreamSupport.stream(iterable.spliterator(), false).onClose(() -> {
+			try {
+				rs.close();
+			} catch (SQLException e) {
+				//we tried;
+			}
+		});
 	}
 	
 	private static <X, E extends Exception> Iterator<X> iterateResultSet(ResultSet rs, FunctionWithException<ResultSet,X,E> mapper) {
@@ -77,6 +84,39 @@ public class ${classname} {
 			}
 			
 		};
+	}
+	
+	private static Map<String,Object> rowToMap(ResultSet rs) throws SQLException {
+		Map<String, Object> out = new HashMap<>();
+		ResultSetMetaData rsm = rs.getMetaData();
+		for (int i=0; i<rsm.getColumnCount(); i++) {
+			out.put(
+				rsm.getColumnName(i+1), 
+				rs.getObject(i+1)
+			);
+		}
+		return out;
+	}
+	
+	/*************** GENERAL DB FUNCTIONS **************************/
+	
+	public int apply(String preparedSql, Object... parameters) throws SQLException {
+		int i = 1;
+		PreparedStatement pst = conn.prepareStatement(preparedSql);
+		for (Object parameter: parameters) {
+			pst.setObject(i, parameter);
+		}
+    	return pst.executeUpdate();
+	}
+	
+	public Stream<Map<String,Object>> retrieve(String preparedSql, Object... parameters) throws SQLException {
+		int i = 1;
+		PreparedStatement pst = conn.prepareStatement(preparedSql);
+		for (Object parameter: parameters) {
+			pst.setObject(i, parameter);
+		}
+    	ResultSet rs = pst.executeQuery();
+    	return streamResultSet(rs,r -> rowToMap(r));
 	}
 	
 	/*************** TABLE READERS **************************/
@@ -146,8 +186,8 @@ public class ${classname} {
 		Writer(Connection conn) throws SQLException {
 <#list model.getTables() as class>
 			pst${class.getName().getSimpleName()} = conn.prepareStatement("insert into ${class.getTableName()} "+
-				"(<#list class.getColumns() as method>${method.getColumnName()}<#sep>,</#sep></#list>)"+
-				" values (<#list class.getColumns() as method>?<#sep>,</#sep></#list>)"
+				"(<#list class.getWriteColumns() as method>${method.getColumnName()}<#sep>,</#sep></#list>)"+
+				" values (<#list class.getWriteColumns() as method>?<#sep>,</#sep></#list>)"
 			);
 </#list>
 		}
@@ -171,7 +211,7 @@ public class ${classname} {
 	
 		public int write${sn}(${sn} input) throws SQLException {
 			pst${sn}.clearParameters();
-	<#list class.getColumns() as method>
+	<#list class.getWriteColumns() as method>
     		pst${sn}.setObject(${method?index+1}, input.${method.getName().getter()}());
     </#list>
     		return pst${sn}.executeUpdate();
@@ -186,7 +226,7 @@ public class ${classname} {
 			int current = 0;
 			for (${sn} input: inputs) {
 				pst${sn}.clearParameters();
-	<#list class.getColumns() as method>
+	<#list class.getWriteColumns() as method>
     			pst${sn}.setObject(${method?index+1}, input.${method.getName().getter()}());
     </#list>
     			pst${sn}.addBatch();

@@ -239,6 +239,8 @@ public class SqlUtils {
 		ResultSet rs = pstmt.executeQuery(sql);
 		// PreparedStatement pstmt = con.prepareStatement(sql);
 		ResultSetMetaData rsm = rs.getMetaData(); //pstmt.getMetaData();
+		// N.B. could have used this:
+		// con.getMetaData().getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern)
 		String schema = rsm.getSchemaName(1);
 		String table = rsm.getTableName(1).equals("") ? tablename : rsm.getTableName(1);
 		List<ColumnDetail> columns = columnsFromMetadata(rsm);

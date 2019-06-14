@@ -220,7 +220,7 @@ public class JavaFromSqlMojo extends AbstractMojo {
 						FluentList.empty(), 
 						packageFQN, 
 						Optional.of(new JPackageMetadata(
-								FluentList.create(BuiltIn.CORE, BuiltIn.IMPL),
+								FluentList.create(BuiltIn.CORE, BuiltIn.FLUENT, BuiltIn.FLUENT_IMPL, BuiltIn.FACTORY),
 								FluentList.create(
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
 										"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
