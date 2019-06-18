@@ -38,11 +38,11 @@ public class ${classname} extends Observable implements ${sn}, ${sn}Fluent<#if p
 	</#list>
 	}
 	
-	<#list class.getMethods() as method>
+	<#-- <#list class.getMethods() as method>
 		<#if method.isTypeOf("java.lang.Cloneable")>
 	@SuppressWarnings("unchecked")
 		<#break></#if>
-	</#list>
+	</#list> -->
 	public ${sn}FluentImpl(${sn} clone) {
 	<#list class.getMethods() as method>
 		<#if method.isTypeOf("java.lang.Cloneable")>

@@ -3,9 +3,6 @@ package uk.co.terminological.javapig.sqlloader;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.persistence.Id;
-
-import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JProject;
 
 public class SqlProject extends JProject {

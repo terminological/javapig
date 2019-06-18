@@ -1,7 +1,6 @@
 package uk.co.terminological.javapig.sqlloader;
 
 import uk.co.terminological.javapig.annotations.Scope;
-import uk.co.terminological.javapig.csvloader.CsvInterface;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 import uk.co.terminological.javapig.javamodel.JModelAdaptor;

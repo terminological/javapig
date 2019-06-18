@@ -33,7 +33,6 @@ import uk.co.terminological.datatypes.FluentSet;
 import uk.co.terminological.datatypes.Triple;
 import uk.co.terminological.javapig.JModelWriter;
 import uk.co.terminological.javapig.annotations.BuiltIn;
-import uk.co.terminological.javapig.index.IndexablePlugin;
 import uk.co.terminological.javapig.javamodel.JAnnotation;
 import uk.co.terminological.javapig.javamodel.JAnnotationEntry;
 import uk.co.terminological.javapig.javamodel.JAnnotationValue;

@@ -1,12 +1,9 @@
 package uk.co.terminological.javapig.sqlloader;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import edu.emory.mathcs.backport.java.util.Collections;
 import uk.co.terminological.datatypes.FluentList;
 import uk.co.terminological.javapig.javamodel.JClassName;
 import uk.co.terminological.javapig.javamodel.JGetMethod;

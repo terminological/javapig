@@ -30,15 +30,30 @@ public class ${classname} {
 	
 	Connection conn;
 	
-	public ${classname}(Path config) {
-		try {
+	public static ${classname} from(Path config) {
+		
 			Properties prop =  new Properties();
-			prop.load(Files.newInputStream(config));
+			try {
+				prop.load(Files.newInputStream(config));
+			} catch (IOException e) {
+				throw new RuntimeException("exception loading properties file: "+e.getLocalizedMessage(), e);
+			}
+			
+			return new Database(prop);
+			
+	}
+	
+	public ${classname}(Properties prop) {
+		try {
 			Class.forName(prop.getProperty("driver"));
 			conn = DriverManager.getConnection(prop.getProperty("url"), prop);
 		} catch (Exception e) {
 			throw new RuntimeException("exception setting up database connection: "+e.getLocalizedMessage(), e);
 		}
+	}
+	
+	public ${classname}(Connection conn) {
+		this.conn = conn;
 	}
 	
 	/*************** RESULT SET UTILITY FUNCTIONS **************************/
