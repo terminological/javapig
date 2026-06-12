@@ -1,8 +1,8 @@
 @Model(
-		plugins = {
-				"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
-				"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
-		}, 
+//		plugins = {
+//				"uk.co.terminological.javapig.sqlloader.SqlPlugin$Model",
+//				"uk.co.terminological.javapig.sqlloader.SqlPlugin$Interface"
+//		}, 
 		builtins = { 
 				//BuiltIn.IMPL,
 				//BuiltIn.MIRROR,
