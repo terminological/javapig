@@ -52,18 +52,19 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-plugin-plugin</artifactId>
-				<version>3.5</version>
+				<version>3.6.4</version>
 				<configuration>
+					<goalPrefix>javapig</goalPrefix>
 					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
 				</configuration>
-				<executions>
-					<execution>
-						<id>mojo-descriptor</id>
-						<goals>
-							<goal>descriptor</goal>
-						</goals>
-					</execution>
-				</executions>
+<!--				<executions>-->
+<!--					<execution>-->
+<!--						<id>mojo-descriptor</id>-->
+<!--						<goals>-->
+<!--							<goal>descriptor</goal>-->
+<!--						</goals>-->
+<!--					</execution>-->
+<!--				</executions>-->
 			</plugin>
 		</plugins>
 	</build>

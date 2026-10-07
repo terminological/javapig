@@ -9,24 +9,44 @@ import javax.persistence.OneToMany;
 import uk.co.terminological.javapig.javamodel.JGetMethod;
 import uk.co.terminological.javapig.javamodel.JInterface;
 
+/**
+ * An extended {@link JInterface} that provides indexing metadata for the index plugin.
+ *
+ * <p>Methods annotated with {@code @Id}, {@link Primary}, {@link Secondary}, or
+ * {@link Searchable} are used to determine primary keys, secondary indexes, and
+ * search fields. Methods returning this interface type with {@code @OneToMany}
+ * are treated as foreign key relationships.</p>
+ *
+ * @see IndexablePlugin
+ * @see IndexableProject
+ * @see Primary
+ * @see Secondary
+ * @see Searchable
+ */
 public class IndexableInterface extends JInterface {
 
+	/**
+	 * Constructs an indexable interface by wrapping the given interface.
+	 *
+	 * @param in the interface to wrap
+	 */
 	public IndexableInterface(JInterface in) {
 		super(in);
 	}
 
 	/**
-	 * Determines whether a method in this interface has been annotated with a {@link javax.persistance.Id} annotation
-	 * @return true if present
+	 * Checks whether this interface has an identifier method annotated with {@code @Id}.
+	 *
+	 * @return {@code true} if a method with {@code @Id} exists
 	 */
 	public boolean hasIdentifier() {
 		return getIdentifier() != null;
 	}
 	
-	/** 
-	 * If a method in this interface exists that is annotated with {@link javax.persistance.Id} then this returns that method
-	 * otherwise returns null.
-	 * @return
+	/**
+	 * Returns the method annotated with {@code @Id}, if present.
+	 *
+	 * @return the identifier method, or {@code null}
 	 */
 	public JGetMethod getIdentifier() {
 		return this.getModel().getMethods().stream().filter(m -> m.declaredBy(this))
@@ -35,10 +55,11 @@ public class IndexableInterface extends JInterface {
 			.orElse(null);
 	}
 	
-	/** 
-	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.index.Secondary} then this returns that method
-	 * otherwise returns null.
-	 * @return
+	/**
+	 * Returns all methods annotated with {@code @Id} or {@link Primary} — these form
+	 * the primary indexes for the interface.
+	 *
+	 * @return the set of primary index methods
 	 */
 	public Set<JGetMethod> getPrimaryIndexes() {
 		return this.getModel().getMethods().stream().filter(m -> m.declaredBy(this))
@@ -46,10 +67,11 @@ public class IndexableInterface extends JInterface {
 			.collect(Collectors.toSet());
 	}
 	
-	/** 
-	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.index.Secondary} then this returns that method
-	 * otherwise returns an empty set.
-	 * @return
+	/**
+	 * Returns all methods annotated with {@link Secondary} — these form the
+	 * secondary indexes for the interface.
+	 *
+	 * @return the set of secondary index methods
 	 */
 	public Set<JGetMethod> getSecondaryIndexes() {
 		return this.getModel().getMethods().stream().filter(m -> m.declaredBy(this))
@@ -57,10 +79,11 @@ public class IndexableInterface extends JInterface {
 			.collect(Collectors.toSet());
 	}
 	
-	/** 
-	 * If a method in this interface exists that is annotated with {@link uk.co.terminological.javapig.index.Secondary} then this returns that method
-	 * otherwise returns null.
-	 * @return
+	/**
+	 * Returns all methods annotated with {@code @OneToMany} that return this interface type —
+	 * these represent foreign key relationships from other interfaces.
+	 *
+	 * @return the set of foreign key methods
 	 */
 	public Set<JGetMethod> getForeignIndexes() {
 		return this.getModel().getMethods().stream().filter(m -> m.getUnderlyingType().equals(this.getName()))
@@ -68,10 +91,11 @@ public class IndexableInterface extends JInterface {
 			.collect(Collectors.toSet());
 	}
 	
-	/** 
-	 * If a method in this interface exists that is annotated with {@link javax.persistance.Id} then this returns that method
-	 * otherwise returns null.
-	 * @return
+	/**
+	 * Returns all methods annotated with {@link Searchable} — these are fields that
+	 * support text-based search.
+	 *
+	 * @return the set of searchable methods
 	 */
 	public Set<JGetMethod> getSearchIndexes() {
 		return this.getModel().getMethods().stream().filter(m -> m.declaredBy(this))
@@ -79,6 +103,11 @@ public class IndexableInterface extends JInterface {
 			.collect(Collectors.toSet());
 	}
 	
+	/**
+	 * Checks whether this interface has any indexable fields (primary, secondary, or search).
+	 *
+	 * @return {@code true} if at least one index is defined
+	 */
 	public boolean isIndexed() {
 		return !getPrimaryIndexes().isEmpty() || !getSecondaryIndexes().isEmpty() || !getSearchIndexes().isEmpty(); 
 	}

@@ -129,7 +129,7 @@ public class StringCaster {
 
 			} else if (fieldClazz.equals(Byte.TYPE)
 					|| Byte.class.isAssignableFrom(fieldClazz)) {
-				fieldObject = string.charAt(0);
+				fieldObject = Byte.parseByte(string);
 
 			} else if (fieldClazz.equals(Long.TYPE)
 					|| Long.class.isAssignableFrom(fieldClazz)) {

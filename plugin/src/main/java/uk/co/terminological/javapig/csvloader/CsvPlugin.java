@@ -8,6 +8,22 @@ import uk.co.terminological.javapig.javamodel.JModelAdaptor;
 import uk.co.terminological.javapig.javamodel.JProject;
 import uk.co.terminological.javapig.javamodel.JTemplateInput;
 
+/**
+ * Base class for the CSV loader plugin, which generates CSV reading/writing code
+ * from annotated interfaces.
+ *
+ * <p>The plugin extends the index plugin's metamodel and provides adaptor implementations
+ * for generating a CSV factory ({@link Factory}) and POJO implementations ({@link POJO}).</p>
+ *
+ * <p>Only interfaces annotated with {@code @Csv} are included in code generation.</p>
+ *
+ * @see Csv
+ * @see CsvProject
+ * @see CsvInterface
+ * @see CsvGetMethod
+ * @see Factory
+ * @see POJO
+ */
 public abstract class CsvPlugin extends IndexablePlugin implements JModelAdaptor {
 
 	@Override
@@ -25,6 +41,12 @@ public abstract class CsvPlugin extends IndexablePlugin implements JModelAdaptor
 		return new CsvGetMethod(in);
 	}
 
+	/**
+	 * Filters interfaces: only those annotated with {@code @Csv} pass through.
+	 *
+	 * @param input the template input
+	 * @return {@code true} if the input should be processed
+	 */
 	@Override
 	public boolean filter(JTemplateInput input) {
 		if (input instanceof CsvInterface) {
@@ -34,6 +56,9 @@ public abstract class CsvPlugin extends IndexablePlugin implements JModelAdaptor
 		}
 	}
 
+	/**
+	 * Factory-level adaptor: generates a single {@code CsvFactory} for the root package.
+	 */
 	public static class Factory extends CsvPlugin {
 		@Override
 		public Scope[] getScope() {
@@ -56,6 +81,9 @@ public abstract class CsvPlugin extends IndexablePlugin implements JModelAdaptor
 		}
 	}
 
+	/**
+	 * Interface-level adaptor: generates a {@code XxxCsv} POJO implementation for each CSV interface.
+	 */
 	public static class POJO extends CsvPlugin {
 		@Override
 		public Scope[] getScope() {

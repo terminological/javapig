@@ -131,9 +131,19 @@ public class JProject extends JProjectComponent implements Project {//, JTemplat
 
 	@Override
 	public Collection<JInterface> getClasses(JTemplateInput pckge) {
+		// pckge.getName() may be a JClassName (when pckge is a JInterface)
+		// in which case we need the package portion, not the full FQN
+		String pkgName;
+		if (pckge instanceof JInterface) {
+			pkgName = ((JInterface) pckge).getName().getPackageName();
+		} else if (pckge instanceof JPackage) {
+			pkgName = pckge.getName().getCanonicalName();
+		} else {
+			pkgName = pckge.getName().getCanonicalName();
+		}
 		Set<JInterface> tmp = this.getClasses().stream()
 				.filter(
-						i -> i.getName().getPackageName().startsWith(pckge.getName().toString()))
+						i -> i.getName().getPackageName().equals(pkgName))
 				.collect(Collectors.toSet());
 		return tmp;
 	}
@@ -142,17 +152,33 @@ public class JProject extends JProjectComponent implements Project {//, JTemplat
 	public Collection<JGetMethod> getMethods(JTemplateInput in) {
 		JInterface iface = (JInterface) in;
 		List<JGetMethod> out = new ArrayList<>();
+		// Collect all supertypes transitively (not just direct supertypes)
+		Set<JClassName> allSupertypes = new LinkedHashSet<>();
+		collectAllSupertypes(iface, allSupertypes);
 		out.addAll(
 				this.getMethods().stream()
-				.filter(m -> 
-					
-							(
-									m.getDeclaringClass().equals(iface) ||
-									iface.getSupertypes().contains(m.getDeclaringClass().getName())
-							)
-							&& !m.isDefault())
+				.filter(m ->
+						(
+								m.getDeclaringClass().equals(iface) ||
+								allSupertypes.contains(m.getDeclaringClass().getName())
+						)
+						&& !m.isDefault())
 				.collect(Collectors.toList()));
 		return out;
+	}
+
+	/**
+	 * Recursively collect all transitive supertypes of an interface.
+	 */
+	private void collectAllSupertypes(JInterface iface, Set<JClassName> collected) {
+		for (JClassName sup : iface.getSupertypes()) {
+			if (collected.add(sup)) {
+				JInterface supIface = findClass(sup);
+				if (supIface != null) {
+					collectAllSupertypes(supIface, collected);
+				}
+			}
+		}
 	}
 
 	/*@Override

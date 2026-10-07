@@ -34,12 +34,43 @@ import uk.co.terminological.javapig.javamodel.JPackage;
 import uk.co.terminological.javapig.javamodel.JPackageMetadata;
 import uk.co.terminological.javapig.javamodel.tools.JNameBuilder;
 
+/**
+ * Parses Java source files using QDox and builds a {@link JProject} metamodel
+ * for use by the code generation pipeline.
+ *
+ * <p>The scanner processes all classes in source folders whose packages are
+ * annotated with {@code @Model}. Only interfaces (not enums or classes) that
+ * are not themselves annotated with {@code @Generated} are included. Methods
+ * are filtered to include only non-void, no-argument, non-default accessor methods.</p>
+ *
+ * <p>Filtering rules for methods:</p>
+ * <ul>
+ *   <li>Methods with parameters are excluded.</li>
+ *   <li>Methods returning {@code void} are excluded.</li>
+ *   <li>Default methods are parsed but the {@code isDefault} flag is preserved on
+ *       the resulting {@link JGetMethod} for downstream adaptors to decide.</li>
+ *   <li>Methods on interfaces annotated with {@code @Generated} are excluded
+ *       entirely (the interface itself is skipped).</li>
+ * </ul>
+ *
+ * @see JProject
+ * @see JInterface
+ * @see JGetMethod
+ * @see AptJModelBuilder
+ * @see QDoxUtils
+ */
 public class QDoxJModelBuilder {
 
 	private JavaProjectBuilder jpb;
 	ClassLibraryBuilder libraryBuilder;
 	JProject model;
 
+	/**
+	 * Constructs the scanner with a new, empty {@link SortedClassLibraryBuilder}
+	 * initialized with the default class loaders.
+	 *
+	 * @param model the project metamodel to populate
+	 */
 	QDoxJModelBuilder(JProject model) {
 		libraryBuilder = new SortedClassLibraryBuilder(); 
 		libraryBuilder.appendDefaultClassLoaders();
@@ -47,6 +78,17 @@ public class QDoxJModelBuilder {
 		this.model = model;
 	}
 
+	/**
+	 * Scans the given source directories and returns a populated {@link JProject}.
+	 *
+	 * <p>This is the main entry point for source-file-based scanning. The scanner
+	 * walks each source folder, identifies packages annotated with {@code @Model},
+	 * and constructs the metamodel from the declared interfaces and their methods.</p>
+	 *
+	 * @param files the primary source directories to scan
+	 * @param others additional source directories (varargs)
+	 * @return a fully populated JProject metamodel
+	 */
 	public static JProject scanModel(File[] files, File... others) {
 		QDoxJModelBuilder out = new QDoxJModelBuilder(new JProject());
 		List<File> tmp = new ArrayList<>(); 
@@ -56,6 +98,11 @@ public class QDoxJModelBuilder {
 		return out.getModel();
 	}
 
+	/**
+	 * Returns the project metamodel that has been (or will be) built by this scanner.
+	 *
+	 * @return the JProject being populated
+	 */
 	public JProject getModel() {
 		return model;
 	}
@@ -86,6 +133,16 @@ public class QDoxJModelBuilder {
 		}
 	}
 
+	/**
+	 * Creates a {@link JGetMethod} from a QDox {@link JavaMethod}, applying the
+	 * filtering rules (no parameters, non-void).
+	 *
+	 * <p>If the method has already been defined in the project, it is returned
+	 * from the project cache. Methods that fail filtering return {@code null}.</p>
+	 *
+	 * @param m the QDox method to convert
+	 * @return the created JGetMethod, or {@code null} if the method is filtered out
+	 */
 	public JGetMethod createMethod(JavaMethod m) {
 
 		if (model.methodIsDefined(JNameBuilder.from(m))) return model.findMethod(JNameBuilder.from(m));
@@ -112,6 +169,13 @@ public class QDoxJModelBuilder {
 
 
 
+	/**
+	 * Creates a {@link JInterface} from a QDox {@link JavaClass}, extracting its
+	 * annotations, name, and superinterfaces, then recursively scanning its methods.
+	 *
+	 * @param clazz the QDox class representing the interface
+	 * @return the created JInterface
+	 */
 	public JInterface createClass(JavaClass clazz) {
 		JClassName cn = JNameBuilder.from(clazz);
 		
@@ -142,6 +206,13 @@ public class QDoxJModelBuilder {
 
 
 
+	/**
+	 * Creates a {@link JPackage} from a QDox {@link JavaPackage}, extracting
+	 * its {@code @Model} annotation (if present) to build package metadata.
+	 *
+	 * @param pkg the QDox package to convert
+	 * @return the created JPackage
+	 */
 	public JPackage createPackage(JavaPackage pkg) {
 
 		if (model.packageIsDefined(pkg.getName())) return model.findPackage(pkg.getName());
@@ -190,6 +261,13 @@ public class QDoxJModelBuilder {
 		
 	}
 
+	/**
+	 * A QDox annotation value visitor that resolves {@link JavaAnnotation} elements
+	 * by looking up their fully-qualified names through the context's imports.
+	 *
+	 * <p>Also overrides {@link #visit(JavaAnnotation)} to recursively process
+	 * nested annotations by delegating to {@link #createAnnotation(JavaAnnotation, RecursiveVisitor)}.</p>
+	 */
 	public static class RecursiveVisitor extends QDoxUtils.WorkaroundVisitor {
 		
 		
@@ -198,6 +276,13 @@ public class QDoxJModelBuilder {
 			
 		}
 
+		/**
+		 * Resolves the fully-qualified class name for a simple annotation type name
+		 * by searching the imports of the context class.
+		 *
+		 * @param ann the QDox annotation
+		 * @return the FQN if an import resolves the simple name, empty otherwise
+		 */
 		public Optional<String> fqnForSimpleName(JavaAnnotation ann) {
 			String simpleName = ann.getType().getValue();
 			JavaClass tmp;
@@ -219,6 +304,12 @@ public class QDoxJModelBuilder {
 	};
 
 
+	/**
+	 * Checks whether a class is annotated with {@code @Generated} (from {@code javax.annotation}).
+	 *
+	 * @param e the element to check
+	 * @return {@code true} if the element is a generated class
+	 */
 	private boolean notGenerated(JavaClass e) {
 		return !QDoxUtils.hasAnnotation(Generated.class,e);
 	}
@@ -227,7 +318,22 @@ public class QDoxJModelBuilder {
 		return isInModel(this.jpb.getPackageByName(clazz.getPackageName()));
 	}
 
+	/**
+	 * Determines whether a package (or any of its ancestors) is annotated with {@code @Model},
+	 * meaning it should be included in the metamodel.
+	 *
+	 * <p>The unnamed (default) package is never in the model. It must be screened out
+	 * before calling {@link JavaPackage#getParentPackage()}: QDox implements that as an
+	 * unguarded {@code name.substring(0, name.lastIndexOf('.'))}, which throws
+	 * {@link StringIndexOutOfBoundsException} for an empty package name. The unnamed
+	 * package is contributed to the builder by {@code appendDefaultClassLoaders()}.</p>
+	 *
+	 * @param tmp the QDox package to check, may be {@code null}
+	 * @return {@code true} if the package or an ancestor package carries {@code @Model}
+	 */
 	private boolean isInModel(JavaPackage tmp) {
+		if (tmp == null) return false;
+		if (tmp.getName() == null || tmp.getName().isEmpty()) return false;
 		if (getModelAnn(tmp).isPresent()) return true;
 		if (tmp.getParentPackage() != null) {
 			return isInModel(tmp.getParentPackage());
